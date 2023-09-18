@@ -1,7 +1,7 @@
 #include "Calweights.h"
-//#include "read_write_csv.h"
+//#include "lib/read_write_csv.h"
 
-#define LOOP_FACTOR 32
+#define LOOP_FACTOR 1
 
 // this function is used to copy a particle's vector into two vector.
 // Those two generated vectors are used to calculate the estimated meas.
@@ -30,7 +30,7 @@ void copy_result(	fixed_type pzx_fp[SN_NUM*2][SN_NUM*2],
 #pragma HLS inline off
 	for(int i =0; i < SN_NUM*2;i++)
 	{
-		zDiff[j*SN_NUM*2+i] = zDiff_fp[i];
+		zDiff[j*N_MEAS+i] = zDiff_fp[i];
 		for(int k =0; k < SN_NUM*2;k++)
 		{
 			pzx[j*SN_NUM*2*SN_NUM*2+ i*SN_NUM*2+ k] = pzx_fp[i][k];
@@ -72,7 +72,6 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 
 	fixed_type zDiff_local[NUM_PARTICLES*N_MEAS];
 	fixed_type pzx_local[NUM_PARTICLES*N_MEAS*N_MEAS];
-//	showmat_S(&R);
 	fixed_type pxx_local1[NUM_VAR*NUM_VAR];
 	fixed_type pxx_local2[NUM_VAR*NUM_VAR];
 	Mat prtcls_local;
@@ -80,34 +79,28 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 	msmt msmtinfo1,msmtinfo2,msmtinfo3;
 
 	load_data(Pxx_,prtcls,R_mat,msmtinfo,pxx_local1,pxx_local2,&prtcls_local,&R_local,&msmtinfo1,&msmtinfo2,&msmtinfo3);
-	likelihood:for(int j =0; j < NUM_PARTICLES;j++)
+	int nobs1 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
+	int nobs2 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
+
+//	likelihood1:for(int j =0; j < NUM_PARTICLES/LOOP_FACTOR;j++)
+	likelihood:for(int j =0; j <  NUM_PARTICLES/LOOP_FACTOR;j++)
 	{
 		// reuse resources
 		// tempX2 is Hxx, tempX3 is z_cap
 #pragma HLS DATAFLOW
 		Mat_S temp_X;
-		msmt msmtinfo_2;
 		Mat_S temp_X2;
 		Mat_S temp_X3;
 		Mat_S temp_X4;
-		fixed_type pzx_fp[N_MEAS][N_MEAS];
-		fixed_type zDiff_fp[N_MEAS];
-
-		fixed_type Hxx_local1[N_MEAS*NUM_VAR];
-		fixed_type Hxx_local2[N_MEAS*NUM_VAR];
-
-
-		fixed_type comb_asym[PXX_AP_LEN*N_ASYM];
-		fixed_type comb_sym[PXX_AP_LEN*N_SYM];
-
-		fixed_type acc_sym[N_SYM];
-		fixed_type acc_asym[N_ASYM];
 
 		int idx1 = index;
 		int idx2 = index;
-//		int nobs =  n_aoa + n_tdoa;
+
 		int j1 = j;
 		int j2 = j;
+		int j3 = j;
+		int j4 = j;
+
 
 
 		// duplicate data for further single-producer-consumer violation
@@ -116,20 +109,18 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 //		Calculate the estimated measurement based on the given particles
 		ObsJacobian(&temp_X,idx1,&msmtinfo1,&temp_X2);
 		GISobs_model(&temp_X4,idx2,&msmtinfo2,&temp_X3);
+//		showmat_S(&temp_X2);
+//		showmat_S(&temp_X3);
 
-		duplicate_pzxDF_v2(temp_X2.entries,Hxx_local1,Hxx_local2);
-		symmetric_mul(Hxx_local1, comb_sym);
-		asymmetric_mul(Hxx_local2, comb_asym);
+//		pzx_cal(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
+		GISPzx3(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
+		zDiff_cal(&temp_X3,&msmtinfo3,zDiff_local,nobs2,j4);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/ObsJacobian_COV.csv",convert_double(temp_X2.entries,1,13*6,0),6,13);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/GISobs_model_COV.csv",convert_double(temp_X3.entries,6,1,0),1,6);
 
-		elewise_symAcc(comb_sym,pxx_local1,&R_local,acc_sym);
-		elewise_asymAcc(comb_asym,pxx_local2,acc_asym);
-		cp_pzx(acc_sym,acc_asym,pzx_fp,&msmtinfo3, &temp_X3,zDiff_fp);
-
-		copy_result(pzx_fp,zDiff_fp,j2,zDiff_local,pzx_local);
 	}
-
 	store_data(zDiff_local, pzx_local, zDiff,pzx);
-	// normalized weights
+
 }
 }
 
@@ -183,15 +174,13 @@ void store_data( fixed_type zDiff_local[NUM_PARTICLES*SN_NUM*2],
 
 	pzx_cp:for(int i=0; i < N_MEAS*N_MEAS*NUM_PARTICLES;i++)
 	{
-//#pragma HLS PIPELINE
-//#pragma HLS UNROLL factor=16
+#pragma HLS PIPELINE
 		pzx[i] =pzx_local[i];
 	}
 
 	zDiff_cp:for(int i=0; i < N_MEAS*NUM_PARTICLES;i++)
 	{
-//#pragma HLS PIPELINE
-//#pragma HLS UNROLL factor=16
+#pragma HLS PIPELINE
 			zDiff[i] =zDiff_local[i];
 	}
 }

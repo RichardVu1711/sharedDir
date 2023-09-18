@@ -1,5 +1,4 @@
-#include "../calW/GISPzx.h"
-
+#include "GISPzx.h"
 #include <cstdint>
 #include <cstring>
 
@@ -77,13 +76,6 @@ void cp_pzx(fixed_type acc_sym[N_SYM], fixed_type acc_asym[N_ASYM], fixed_type p
 		zDiff[i] = msmtinfo->z.entries[i*13] - z_cap->entries[i*13];
 	}
 }
-void duplicate_pzxDF_v2(fixed_type  hxx_local[NUM_VAR*NUM_VAR],
-				fixed_type Hxx_local1[N_MEAS*NUM_VAR],fixed_type Hxx_local2[N_MEAS*NUM_VAR])
-{
-	memcpy(Hxx_local1, hxx_local, (size_t) N_MEAS*NUM_VAR*sizeof(fixed_type));
-	memcpy(Hxx_local2, hxx_local, (size_t) N_MEAS*NUM_VAR*sizeof(fixed_type));
-}
-
 void duplicate_pzxDF(fixed_type  hxx_local[NUM_VAR*NUM_VAR],fixed_type  pxx_local[NUM_VAR*NUM_VAR],
 				fixed_type Hxx_local1[N_MEAS*NUM_VAR],fixed_type Hxx_local2[N_MEAS*NUM_VAR],
 				fixed_type pxx_local1[NUM_VAR*NUM_VAR], fixed_type pxx_local2[NUM_VAR*NUM_VAR])

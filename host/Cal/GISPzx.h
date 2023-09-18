@@ -1,7 +1,7 @@
 #pragma once
-#include "../lib/mat_lib.h"
-#include "../lib/global_define.h"
-#include "../lib/GISmsmt_prcs.h"
+#include "../global_define/mat_lib.h"
+#include "../global_define/global_define.h"
+#include "../GISmsmt_prcs.h"
 #define N_PZX N_MEAS*(N_MEAS+1)/2
 #define N_SYM N_MEAS
 #define N_ASYM N_MEAS*(N_MEAS-1)/2
@@ -22,8 +22,6 @@ void idx_extract( int i, int* idx1, int* idx2);
 
 void pzx_cal(fixed_type Hxx_local[NUM_VAR*NUM_VAR], fixed_type pxx_local[NUM_VAR*NUM_VAR], Mat_S* R_mat,
 			fixed_type pzx_fp[N_MEAS][N_MEAS]);
-void duplicate_pzxDF_v2(fixed_type  hxx_local[NUM_VAR*NUM_VAR],
-				fixed_type Hxx_local1[N_MEAS*NUM_VAR],fixed_type Hxx_local2[N_MEAS*NUM_VAR]);
 void duplicate_pzxDF(fixed_type  hxx_local[NUM_VAR*NUM_VAR],fixed_type  pxx_local[NUM_VAR*NUM_VAR],
 				fixed_type Hxx_local1[N_MEAS*NUM_VAR],fixed_type Hxx_local2[N_MEAS*NUM_VAR],
 				fixed_type pxx_local1[NUM_VAR*NUM_VAR], fixed_type pxx_local2[NUM_VAR*NUM_VAR]);
