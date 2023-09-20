@@ -131,6 +131,7 @@ std::vector<double> read_csvMulLine(std::string filename, int row_start, int nro
 			{
 				// Add the current integer to the 'colIdx' column's values vector
 				result.push_back(val);
+//				cout << val << ", ";
 	//          std::cout << std::fixed << std::setprecision(6) << val;
 	//			std::cout << " Read \n";
 				// If the next token is a comma, ignore it and move on
@@ -185,7 +186,6 @@ void convert_FP(std::vector<double> input_vec, fixed_type out_FP[], int row, int
 {
 //	printf( "\n\n");
 	int size = input_vec.size();
-//	printf("size is: %d\n ",size );
 
 	int n_col = NUM_PARTICLES;
 	if (isMat==0)
@@ -196,7 +196,7 @@ void convert_FP(std::vector<double> input_vec, fixed_type out_FP[], int row, int
 	{
 		n_col = col;
 	}
-	else
+	else if (isMat == 1)
 		n_col = NUM_PARTICLES;
 
 	int k = 0;

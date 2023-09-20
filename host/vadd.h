@@ -51,21 +51,10 @@ ALL TIMES.
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY 1
 
 #include <CL/cl2.hpp>
+#include "calweights/another_GISPzx.h"
+#include "env_setup/host_setup.h"
 
-//Customized buffer allocation for 4K boundary alignment
-//template <typename T>
-//struct aligned_allocator
-//{
-//  using value_type = T;
-//  T* allocate(std::size_t num)
-//  {
-//    void* ptr = nullptr;
-//    if (posix_memalign(&ptr,4096,num*sizeof(T)))
-//      throw std::bad_alloc();
-//    return reinterpret_cast<T*>(ptr);
-//  }
-//  void deallocate(T* p, std::size_t num)
-//  {
-//    free(p);
-//  }
-//};
+
+
+
+

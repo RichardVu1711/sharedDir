@@ -1,8 +1,9 @@
 #include "resample_pf.h"
 
-void resamplePF_wrap(Mat* particles, fixed_type wt[NUM_PARTICLES], fixed_type r)
+void resamplePF_wrap(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
+					fixed_type wt[NUM_PARTICLES], fixed_type r)
 {
-	resample_pf(particles->entries,wt,NUM_PARTICLES,r,wt);
+	resample_pf(particle_in,wt,NUM_PARTICLES,r,wt);
 }
 
 int resample_pf(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],

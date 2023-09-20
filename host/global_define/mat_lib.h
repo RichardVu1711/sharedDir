@@ -32,4 +32,8 @@ void set_ele(Mat* A, int row, int col, fixed_type in_val);
 void show_mat(Mat* X);
 
 //  hasmap handy function
+// type 1, MAT_S => row*NUM_VAR+col
+// type 2, symmetric Type
+// type 3, Pzx => row*N_MEAS+col
 int hash_map(int row, int col, int type);
+

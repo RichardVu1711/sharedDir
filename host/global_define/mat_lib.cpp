@@ -250,12 +250,35 @@ void show_mat(Mat* X)
 #endif
 }
 
+
 //hash-map handy function
 int hash_map(int row, int col, int type)
 {
 	// type = 1 => Mat_S
 	int result =0;
-	if(type ==1)
-		result = row*NUM_VAR+col;
+	switch(type)
+	{
+		case 1:
+			result = row*NUM_VAR+col;
+			break;
+		case 2: {
+			int temp = row;
+			if (row > col)
+			{
+				temp = col;
+			}
+			result =  row*NUM_VAR+col - temp*(temp+1)/2;
+			break;
+		}
+		case 3:
+			result = row*N_MEAS + col;
+			break;
+		default:
+		{
+			printf("ERROR: Invalid hashmap type!!\n\n");
+			result = -1;
+		}
+			break;
+	}
 	return result;
 }
