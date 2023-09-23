@@ -8,13 +8,13 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS*NUM_VAR], fixed_type pxx_local[NUM_VAR*
 {
 #pragma HLS ARRAY_PARTITION dim=1 type=complete variable=Hxx_local
 #pragma HLS ARRAY_PARTITION dim=1 type=complete variable=pxx_local
-//	#pragma HLS ARRAY_PARTITION dim=1 type=complete variable=pxx_local
-//	#pragma HLS BIND_STORAGE variable=pxx_local type=ram_1wnr impl=bram
-	#pragma HLS PIPELINE off
+
+#pragma HLS PIPELINE off
 
 	fixed_type temp_re[N_MEAS][NUM_VAR];
 #pragma HLS ARRAY_PARTITION dim=1 type=complete variable=temp_re
 	fixed_type t_pxx1[N_MM][NUM_VAR];
+#pragma HLS BIND_STORAGE variable=t_pxx1 type=ram_2p impl=bram
 #pragma HLS ARRAY_PARTITION dim=1 type=complete variable=t_pxx1
 	fixed_type t_re1[N_MM][1];
 #pragma HLS ARRAY_PARTITION dim=2 type=complete variable=t_re1
@@ -32,24 +32,34 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS*NUM_VAR], fixed_type pxx_local[NUM_VAR*
 #pragma HLS LOOP_FLATTEN
 				cpy_hxx:for(int j=0; j < NUM_VAR;j++){
 #pragma HLS UNROLL
+
 					temp1[inst][j] = Hxx_local[i*NUM_VAR+ j];
 				}
 			}			// run NUM_VAR/N_MM iterations
 			mm_cr:for(int k=0; k < NUM_VAR;k = k + N_MM){
 
-				// extract pxx columns
-				cp_pxx:for(int inst =0; inst < N_MM;inst++){
-#pragma HLS LOOP_FLATTEN
-					for(int j =0; j <= NUM_VAR;j++){
-#pragma HLS UNROLL
-						t_pxx1[inst][j] = pxx_local[j*NUM_VAR+k + inst];
-					}
-				}
+//				// extract pxx columns
+//				cp_pxx:for(int inst =0; inst < N_MM;inst++){
+//#pragma HLS UNROLL
+//					for(int j =0; j < NUM_VAR;j++){
+//#pragma HLS UNROLL
+//						t_pxx1[inst][j] = pxx_local[j*NUM_VAR+k + inst];
+//					}
+//				}
 
+				cp_pxx:	for(int inst = 0; inst < N_MM * NUM_VAR; inst++) {
+				    #pragma HLS UNROLL
+
+				    int k_inst = (inst % NUM_VAR) * NUM_VAR + k +inst/NUM_VAR;
+				    int j_inst = inst / NUM_VAR;
+
+				    t_pxx1[j_inst][inst % NUM_VAR] = pxx_local[k_inst];
+				}
 				// Conduct vector multiplication (1x13 vec * 13x1 vec = 1 scalar);
 				vm_rc:for(int inst =0; inst < N_MM;inst++){
 #pragma HLS UNROLL
-						s_macc3_13(temp1[inst],t_pxx1[inst],t_re1[inst]);
+						int i_temp = inst;
+						s_macc3_13(temp1[inst],t_pxx1[inst],t_re1[i_temp]);
 				}
 
 				// copy this result into result vector
@@ -83,14 +93,7 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS*NUM_VAR], fixed_type pxx_local[NUM_VAR*
 	}
 
 //	cout << "Hxx * Pxx = \n";
-//	for(int ii =0; ii < 6;ii++)
-//	{
-//		for(int jj =0; jj < 13;jj++){
-//			cout << temp_re[ii][jj] << ", ";
-//		}
-//		cout << "\n";
-//	}
-//	cout << "\n";
+
 	fixed_type temp_re2[N_MEAS][N_MEAS];
 
 	// calculate Re*Hxx'
@@ -156,7 +159,8 @@ void s_macc3_13(fixed_type temp1[NUM_VAR],
 #pragma HLS BIND_OP variable=temp op=mul impl=dsp
 	// multiply
 	mul:for(int j=0; j< NUM_VAR;j++){
-#pragma HLS UNROLL
+#pragma HLS UNROLL NUM_VAR/2
+#pragma HLS PIPELINE
 		temp = temp + temp1[j] * temp2[j];
 	}
 	fixed_type temp3 = temp;
