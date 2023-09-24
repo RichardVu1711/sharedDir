@@ -1,0 +1,60 @@
+Mon Sep 18 11:46:45 2023: Server was asked to start on port: '45821'
+Mon Sep 18 11:46:45 2023: Server is using token UUID: 'ab413540-85e1-40a7-ad00-1f1cb60a84e8'
+Mon Sep 18 11:46:45 2023: Attempting to start server on port '45821'
+Mon Sep 18 11:46:45 2023: XRC main fifo: created main fifo '/tmp/xrcmainab413540-85e1-40a7-ad00-1f1cb60a84e8', fd read = 11
+Mon Sep 18 11:46:45 2023: Running Rule Check Server
+Mon Sep 18 11:46:45 2023: Version 1.6.1
+Mon Sep 18 11:46:45 2023: Rule Check Server: Accepted socket connection from client
+Mon Sep 18 11:46:46 2023: EXCHANGE_TOKEN received, server token: ab413540-85e1-40a7-ad00-1f1cb60a84e8, passed token: ab413540-85e1-40a7-ad00-1f1cb60a84e8
+Mon Sep 18 11:56:12 2023: SESSION_MGR: creating session with session uuid: 'cbdba21a-bc2c-4b40-911c-d8d5daa77be0' and name 'Emulation-SW'
+Mon Sep 18 11:56:12 2023: SESSION_MGR: closing session for UUID 'cbdba21a-bc2c-4b40-911c-d8d5daa77be0' with name 'Emulation-SW'
+Mon Sep 18 11:56:12 2023: SESSION_MGR: creating session with session uuid: '71b10128-8e42-4bb5-9f58-168983e76dbc' and name 'Emulation-HW'
+Mon Sep 18 11:56:12 2023: SESSION_MGR: closing session for UUID '71b10128-8e42-4bb5-9f58-168983e76dbc' with name 'Emulation-HW'
+Mon Sep 18 11:56:12 2023: SESSION_MGR: creating session with session uuid: '66416c57-6014-407d-8230-b0ca97bf09e6' and name 'Hardware'
+Mon Sep 18 11:56:12 2023: SESSION_MGR: closing session for UUID '66416c57-6014-407d-8230-b0ca97bf09e6' with name 'Hardware'
+Mon Sep 18 11:56:18 2023: SESSION_MGR: creating session with session uuid: '7cbfa661-e3cf-4a18-9b2c-7b4075985354' and name 'Emulation-SW'
+Mon Sep 18 11:56:41 2023: SESSION_MGR: closing session for UUID '7cbfa661-e3cf-4a18-9b2c-7b4075985354' with name 'Emulation-SW'
+Mon Sep 18 11:56:41 2023: SESSION_MGR: creating session with session uuid: '38ce0020-6bf2-4de5-815c-54995455cf1e' and name 'Emulation-SW'
+Mon Sep 18 11:56:55 2023: SESSION_MGR: closing session for UUID '38ce0020-6bf2-4de5-815c-54995455cf1e' with name 'Emulation-SW'
+Mon Sep 18 11:56:55 2023: SESSION_MGR: creating session with session uuid: '21f1c3b5-3923-462f-8776-3f8f183de7da' and name 'Emulation-SW'
+Mon Sep 18 11:56:55 2023: SESSION_MGR: creating session with session uuid: '14e0fe1d-2e7d-4c48-bcc9-bafdd33d4c2e' and name 'Emulation-SW'
+Mon Sep 18 11:56:55 2023: SESSION_MGR: closing session for UUID '21f1c3b5-3923-462f-8776-3f8f183de7da' with name 'Emulation-SW'
+Mon Sep 18 12:16:36 2023: SESSION_MGR: creating session with session uuid: '430b3fd5-c5be-44c1-8a24-5fddc4cc6ef7' and name 'Hardware'
+Mon Sep 18 12:17:16 2023: SESSION_MGR: closing session for UUID '430b3fd5-c5be-44c1-8a24-5fddc4cc6ef7' with name 'Hardware'
+Mon Sep 18 12:17:16 2023: SESSION_MGR: creating session with session uuid: '29a65c2a-1ef3-497b-b921-9b9204bb8d7c' and name 'Hardware'
+Mon Sep 18 12:21:59 2023: SESSION_MGR: closing session for UUID '29a65c2a-1ef3-497b-b921-9b9204bb8d7c' with name 'Hardware'
+Mon Sep 18 12:21:59 2023: SESSION_MGR: creating session with session uuid: 'd49722aa-e070-4902-8037-eb0b96eaab94' and name 'Hardware'
+Mon Sep 18 12:21:59 2023: SESSION_MGR: closing session for UUID 'd49722aa-e070-4902-8037-eb0b96eaab94' with name 'Hardware'
+Mon Sep 18 12:21:59 2023: SESSION_MGR: creating session with session uuid: 'b317cf82-a2df-4e00-be29-fdfd17daecd4' and name 'Hardware'
+Mon Sep 18 12:22:01 2023: SESSION_MGR: closing session for UUID 'b317cf82-a2df-4e00-be29-fdfd17daecd4' with name 'Hardware'
+Mon Sep 18 12:30:49 2023: SESSION_MGR: creating session with session uuid: '933c7e21-fc7a-485f-b777-228be2ec07c8' and name 'Hardware'
+Mon Sep 18 12:30:49 2023: SESSION_MGR: closing session for UUID '933c7e21-fc7a-485f-b777-228be2ec07c8' with name 'Hardware'
+Mon Sep 18 12:30:49 2023: SESSION_MGR: creating session with session uuid: '3fdf6177-2305-47f0-945e-f380e3546640' and name 'Hardware'
+Mon Sep 18 12:36:26 2023: SESSION_MGR: closing session for UUID '3fdf6177-2305-47f0-945e-f380e3546640' with name 'Hardware'
+Mon Sep 18 12:52:51 2023: SESSION_MGR: creating session with session uuid: 'def37e1f-cd4b-4429-8600-95941ca6b4d5' and name 'Hardware'
+Mon Sep 18 12:52:52 2023: SESSION_MGR: closing session for UUID 'def37e1f-cd4b-4429-8600-95941ca6b4d5' with name 'Hardware'
+Mon Sep 18 12:52:52 2023: SESSION_MGR: creating session with session uuid: '56df4ab9-6d04-4919-bbe5-b51a38be908e' and name 'Hardware'
+Mon Sep 18 12:52:52 2023: SESSION_MGR: closing session for UUID '56df4ab9-6d04-4919-bbe5-b51a38be908e' with name 'Hardware'
+Mon Sep 18 12:52:52 2023: SESSION_MGR: creating session with session uuid: '9c744850-9b50-4e5f-a14c-aefa98501ba1' and name 'Hardware'
+Mon Sep 18 12:52:52 2023: SESSION_MGR: closing session for UUID '9c744850-9b50-4e5f-a14c-aefa98501ba1' with name 'Hardware'
+Mon Sep 18 14:32:48 2023: SESSION_MGR: creating session with session uuid: 'd4f8d365-f29d-4231-8987-5cb3eb4cf5c2' and name 'Hardware'
+Mon Sep 18 14:33:46 2023: SESSION_MGR: closing session for UUID 'd4f8d365-f29d-4231-8987-5cb3eb4cf5c2' with name 'Hardware'
+Mon Sep 18 14:33:56 2023: SESSION_MGR: creating session with session uuid: '8830b1ed-e637-421d-b615-27e07860bf22' and name 'Hardware'
+Mon Sep 18 14:37:22 2023: SESSION_MGR: closing session for UUID '8830b1ed-e637-421d-b615-27e07860bf22' with name 'Hardware'
+Mon Sep 18 14:37:22 2023: SESSION_MGR: creating session with session uuid: '04126bdc-e842-447b-9e17-df5fda39802b' and name 'Hardware'
+Mon Sep 18 14:37:23 2023: SESSION_MGR: closing session for UUID '04126bdc-e842-447b-9e17-df5fda39802b' with name 'Hardware'
+Mon Sep 18 14:37:23 2023: SESSION_MGR: creating session with session uuid: '2f568e2c-f6d7-4802-ba77-0eda76daf574' and name 'Hardware'
+Mon Sep 18 14:37:34 2023: SESSION_MGR: closing session for UUID '2f568e2c-f6d7-4802-ba77-0eda76daf574' with name 'Hardware'
+Mon Sep 18 15:46:32 2023: SESSION_MGR: creating session with session uuid: 'e9e44e3d-60a6-4b6b-ae6a-8cd7ef34c81c' and name 'Hardware'
+Mon Sep 18 15:46:32 2023: SESSION_MGR: closing session for UUID 'e9e44e3d-60a6-4b6b-ae6a-8cd7ef34c81c' with name 'Hardware'
+Mon Sep 18 15:46:33 2023: SESSION_MGR: creating session with session uuid: 'a72ad583-753b-4e1f-814b-69c195638124' and name 'Hardware'
+Mon Sep 18 16:16:45 2023: Rule Check Server timeout; shutting down.
+Mon Sep 18 16:16:45 2023: Rule Check Server: do_await_stop
+Mon Sep 18 16:16:45 2023: Rule Check Server: stopping mainFifo_
+Mon Sep 18 16:16:45 2023: On server, in MainFifo::stop() 
+Mon Sep 18 16:16:45 2023: XRC main fifo: do_read error code: Operation canceled
+XRC main fifo: bytes_transferred: 0
+Mon Sep 18 16:16:45 2023: SERVER: destructor for server bound to port 45821
+Mon Sep 18 16:16:45 2023: XRC main fifo: Good unlink of /tmp/xrcmainab413540-85e1-40a7-ad00-1f1cb60a84e8
+Mon Sep 18 16:16:45 2023: Server exiting with status 0.
+Mon Sep 18 16:16:45 2023: Closing log file.
