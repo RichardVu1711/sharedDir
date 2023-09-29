@@ -25,12 +25,9 @@ void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* z_cap)
 	fixed_type diffY[SN_NUM]={0,0,0};
 
 	fixed_type devx [SN_NUM] ={1,1,1};
-	int aoaTag[3];
-	int tdoaTag[3];
+
 	for(int i = 0; i < SN_NUM;i++)
 	{
-		aoaTag[i]= msmtinfo->aoaIdx[i];
-		tdoaTag[i] = msmtinfo->tdoaIdx[i];
 		diffX[i] = x - SNx[i*2];
 		diffY[i] = y - SNx[i*2+1];
 

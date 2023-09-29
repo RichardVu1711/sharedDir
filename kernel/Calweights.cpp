@@ -148,7 +148,7 @@ void load_data(fixed_type pxx[NUM_VAR*NUM_VAR],
 		R_out->entries[i*NUM_VAR+i] = R[i];
 	}
 	memcpy(msmtinfo1,msmtinfo,msmt_size);
-//	memcpy(prtcls_temp->entries,prtcls->entries,mat_size);
+
 	prtcls_cp:for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
 #pragma HLS PIPELINE
@@ -156,9 +156,24 @@ void load_data(fixed_type pxx[NUM_VAR*NUM_VAR],
 	}
 	prtcls_temp->col = NUM_PARTICLES;
 	prtcls_temp->row = NUM_VAR;
-	memcpy(msmtinfo2,msmtinfo1,msmt_size);
-	memcpy(msmtinfo3,msmtinfo2,msmt_size);
+//	memcpy(msmtinfo2,msmtinfo1,msmt_size);
+//	memcpy(msmtinfo3,msmtinfo2,msmt_size);
 	memcpy(pxx_Out2,pxx_Out1,pxx_size);
+
+	// cpy msmtinfo
+	for(int i=0; i < N_MEAS;i++){
+		msmtinfo1->validIdx[i] = msmtinfo->validIdx[i];
+		msmtinfo1->z.entries[i*NUM_VAR] = msmtinfo->z.entries[i*NUM_VAR];
+
+
+	}
+	for(int i=0; i < N_MEAS;i++){
+		msmtinfo1->z.entries[i*NUM_VAR] = msmtinfo->z.entries[i*NUM_VAR];
+		msmtinfo2->z.entries[i*NUM_VAR] = msmtinfo1->z.entries[i*NUM_VAR];
+		msmtinfo3->z.entries[i*NUM_VAR] = msmtinfo1->z.entries[i*NUM_VAR];
+		msmtinfo2->validIdx[i] = msmtinfo1->validIdx[i];
+		msmtinfo3->validIdx[i] = msmtinfo1->validIdx[i];
+	}
 
 }
 void store_data( fixed_type zDiff_local[NUM_PARTICLES*SN_NUM*2],

@@ -1,0 +1,22 @@
+#-----------------------------------------------------------
+# Vivado v2021.1 (64-bit)
+# SW Build 3247384 on Thu Jun 10 19:36:07 MDT 2021
+# IP Build 3246043 on Fri Jun 11 00:30:35 MDT 2021
+# Start of session at: Fri Sep 29 13:24:39 2023
+# Process ID: 341938
+# Current directory: /home/rick/Desktop/git/git_down/sharedDir
+# Command line: vivado
+# Log file: /home/rick/Desktop/git/git_down/sharedDir/vivado.log
+# Journal file: /home/rick/Desktop/git/git_down/sharedDir/vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project /home/rick/Desktop/git/hw_platform/zcu111_custom_pfm/zcu111_custom_pfm.xpr
+Scanning sources...
+Finished scanning sources
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/tools/Xilinx/Vivado/2021.1/data/ip'.
+INFO: [IP_Flow 19-3899] Cannot get the environment domain name variable for the component vendor name. Setting the vendor name to 'user.org'.
+open_project: Time (s): cpu = 00:00:40 ; elapsed = 00:00:39 . Memory (MB): peak = 7489.520 ; gain = 48.414 ; free physical = 14323 ; free virtual = 38711
+update_compile_order -fileset sources_1
+write_project_tcl -all_properties -dump_project_info {/home/rick/Desktop/git/git_down/sharedDir/zcu111_custom_pfm.tcl}

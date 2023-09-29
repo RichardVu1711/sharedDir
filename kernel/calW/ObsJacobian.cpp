@@ -20,13 +20,10 @@ void ObsJacobian(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* H)
 	fixed_type diffY[SN_NUM];
 
 	fixed_type devx [SN_NUM] ={1,1,1};
-	int aoaTag[3];
-	int tdoaTag[3];
+
 //	cout << "ObsJacobian\n";
 	prepare_var:for(int i = 0; i < SN_NUM;i++)
 	{
-		aoaTag[i]= msmtinfo->aoaIdx[i];
-		tdoaTag[i] = msmtinfo->tdoaIdx[i];
 		diffX[i] = SNx[i*2] - x;
 		diffY[i] = SNx[i*2+1] - y;
 
