@@ -1,0 +1,22 @@
+Sat Sep 23 23:17:56 2023: Server was asked to start on port: '35911'
+Sat Sep 23 23:17:56 2023: Server is using token UUID: '591a7e56-4197-4623-8da4-3e4b8d7274cb'
+Sat Sep 23 23:17:56 2023: Attempting to start server on port '35911'
+Sat Sep 23 23:17:56 2023: XRC main fifo: created main fifo '/tmp/xrcmain591a7e56-4197-4623-8da4-3e4b8d7274cb', fd read = 11
+Sat Sep 23 23:17:56 2023: Running Rule Check Server
+Sat Sep 23 23:17:56 2023: Version 1.6.1
+Sat Sep 23 23:17:58 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:18:00 2023: EXCHANGE_TOKEN received, server token: 591a7e56-4197-4623-8da4-3e4b8d7274cb, passed token: 591a7e56-4197-4623-8da4-3e4b8d7274cb
+Sat Sep 23 23:18:48 2023: SESSION_MGR: creating session with session uuid: 'bfe33d33-4c0a-42c2-b05c-3d5c27e60a34' and name 'Hardware'
+Sat Sep 23 23:19:10 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:25:42 2023: SESSION_MGR: closing session for UUID 'bfe33d33-4c0a-42c2-b05c-3d5c27e60a34' with name 'Hardware'
+Sat Sep 23 23:25:44 2023: SESSION_MGR: creating session with session uuid: 'a7515210-d65a-4eda-9a81-e86a16fd9afd' and name 'Hardware'
+Sat Sep 23 23:25:47 2023: SESSION_MGR: closing session for UUID 'a7515210-d65a-4eda-9a81-e86a16fd9afd' with name 'Hardware'
+Sat Sep 23 23:40:10 2023: SESSION_MGR: creating session with session uuid: 'd65a5f8d-52ea-4dd5-a575-dae7875cab8d' and name 'Hardware'
+Sat Sep 23 23:40:23 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:43:05 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:45:10 2023: SESSION_MGR: closing session for UUID 'd65a5f8d-52ea-4dd5-a575-dae7875cab8d' with name 'Hardware'
+Sat Sep 23 23:45:10 2023: SESSION_MGR: creating session with session uuid: '089a5009-3809-4a2e-980c-fdb5a33fe430' and name 'Hardware'
+Sat Sep 23 23:45:23 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:45:25 2023: Rule Check Server: Accepted socket connection from client
+Sat Sep 23 23:45:44 2023: Rule Check Server: Accepted socket connection from client
+Sun Sep 24 00:00:14 2023: Rule Check Server: Accepted socket connection from client

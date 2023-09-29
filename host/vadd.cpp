@@ -68,7 +68,7 @@ ALL TIMES.
 #include "mvnpdf/mvnpdf_code.h"
 #include "calweights/Calweights.h"
 #include "rk4/rk4.h"
-#include "GISmsmt_prcs.h"
+#include "global_define/GISmsmt_prcs.h"
 
 //static const std::string error_message =
 //    "Error: Result mismatch:\n"
@@ -211,7 +211,7 @@ int main(int argc, char* argv[]) {
         		obs_data, 1, 52*10, -1);
         Mat_S obs;
         init_mat(&obs,1,10);
-		for(int i_step=0; i_step < 10;i_step++)
+		for(int i_step=0; i_step < 52;i_step++)
 		{
 			for(int i=0; i < 10;i++)
 			{

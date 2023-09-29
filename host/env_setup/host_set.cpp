@@ -258,6 +258,7 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 	N_eff[0] = 1/re_sum;
 
 	//Note: This is for testing purpose only, please remove it once the functionality is confirmed.
+	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
 	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,6*1024,-1),1024,6);
 	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,36*1024,-1),6*1024,6);
 	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*1024,-1),1,1024);

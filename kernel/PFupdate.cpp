@@ -142,8 +142,8 @@ void PFupdate(fixed_type particle[NUM_VAR*NUM_PARTICLES],
 	// calculate the mean estimation
 	state_mean1:for(int i0 =0*NUM_PARTICLES; i0 < NUM_VAR*NUM_PARTICLES;i0+=NUM_PARTICLES)
 	{
-		ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > sum = 0;
-		ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > sum_0 = 0;
+		fixed_type sum = 0;
+		fixed_type sum_0 = 0;
 		state_mean12:for(int i1 =0; i1 < NUM_PARTICLES; i1+=LOOP_FACTOR)
 		{
 			sum_0 = sum;
@@ -151,34 +151,15 @@ void PFupdate(fixed_type particle[NUM_VAR*NUM_PARTICLES],
 			{
 #pragma HLS PIPELINE II=2
 #pragma HLS UNROLL factor=4
-				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp = sum_0;
-				// shift the weight to the left 8 bits
-				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp_wt = wt_local[i1+i2];
-				temp_wt = temp_wt << 8;
-
-				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp1 = particles_local.entries[i0+i1+i2]*temp_wt;
+				fixed_type temp = sum_0;
+				fixed_type temp1 = particles_local.entries[i0+i1+i2]*wt_local[i1+i2];
 				sum_0 = sum_0 +  temp1;
 			}
 			sum = sum_0;
 		}
-		// go back to the normal resolution
-		sum = sum >> 8;
 		int step = i0/NUM_PARTICLES*NUM_VAR;
 		state_local.entries[step] = sum;
 	}
-
-//	ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp_wt = wt_local[0];
-//	cout << "wt = " << wt_local[0] << "\n";
-//	cout << "temp_wt = " << temp_wt << "\n";
-//	temp_wt = temp_wt << 8;
-//	cout << "temp_wt << 8= " << temp_wt << "\n";
-//	ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > sum = temp_wt*particles_local.entries[0] ;
-//	cout << " temp_wt*particles_local.entries[0]= " << sum << "\n";
-//	sum = sum >> 8;
-//	cout << " temp_wt*particles_local.entries[0] >> 8= " << sum  << "\n";
-//	fixed_type final = sum;
-//	cout << " final= " << final  << "\n";
-
 
 // The sum of arithemic progression with step of 1 is  n(n+1)/2
 //

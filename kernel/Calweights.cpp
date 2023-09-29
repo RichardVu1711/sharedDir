@@ -115,8 +115,8 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 //		pzx_cal(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
 		GISPzx3(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
 		zDiff_cal(&temp_X3,&msmtinfo3,zDiff_local,nobs2,j4);
-		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/ObsJacobian_COV.csv",convert_double(temp_X2.entries,1,13*6,0),6,13);
-		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/GISobs_model_COV.csv",convert_double(temp_X3.entries,6,1,0),1,6);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/ObsJacobian_COV.csv",convert_double(temp_X2.entries,1,13*6,0),6,13);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/GISobs_model_COV.csv",convert_double(temp_X3.entries,6,1,0),1,6);
 
 	}
 	store_data(zDiff_local, pzx_local, zDiff,pzx);

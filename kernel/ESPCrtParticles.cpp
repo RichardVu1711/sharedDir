@@ -63,7 +63,6 @@ void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
     init_mat(&final,NUM_VAR,1);
     Mat_S temp_cal;
     init_mat(&temp_cal,NUM_VAR,NUM_VAR);
-//    cout << "I'm here \n";
     for(int i=0;i<NUM_PARTICLES;i++)
     {
         // based on the literature  review, the calculation of particles
