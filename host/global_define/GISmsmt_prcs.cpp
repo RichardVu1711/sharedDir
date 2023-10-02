@@ -13,7 +13,6 @@ msmt msmt_prcs(Mat_S* obsVals)
 	// obsVals dimension is 1x10
 	//msmt.z dimension is 6x1
 	msmt msmtinfo;
-	init_mat(&(msmtinfo.z),SN_NUM*2,1);
 
 	msmtinfo.n_aoa= 0;
 	msmtinfo.n_tdoa= 0;
@@ -33,7 +32,7 @@ msmt msmt_prcs(Mat_S* obsVals)
 			if(AOA> 180) AOA = -(360 - AOA);
 			AOA = deg2Rad(AOA);
 			// set AOA values to entries
-			set_ele_S(&(msmtinfo.z),k++,0,AOA);
+			msmtinfo.z[k++] = AOA;
 			msmtinfo.n_aoa++;
 			msmtinfo.aoaIdx[i] = i+1;
 			// flag this data is valid
@@ -54,7 +53,7 @@ msmt msmt_prcs(Mat_S* obsVals)
 		if(TDOA !=1023)
 		{
 			// set TDOA values to entries
-			set_ele_S(&(msmtinfo.z),k++,0,TDOA);
+			msmtinfo.z[k++] = TDOA;
 			msmtinfo.n_tdoa++;
 			msmtinfo.tdoaIdx[i] = i+1;
 			// continuous for checking tdoa

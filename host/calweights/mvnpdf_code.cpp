@@ -671,7 +671,7 @@ static double rt_powd_snf(double u0, double u1)
 //                double n_obs
 // Return Type  : double
 //
-double mvnpdf_code(double zCap[6], double[6],
+double mvnpdf_code(double zCap[6], double Mu[6],
                    double Pzx[6][6], int n_obs)
 {
   double A_data[36];

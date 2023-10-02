@@ -193,7 +193,7 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 	memcpy(p_pxxIn[0],p_pxxOut[0],size_pxx);
 
 	msmt msmtinfo = msmt_prcs(obs_data);
-	Mat_S Rmat = R_cal(&msmtinfo);
+	Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
 	fixed_type R [N_MEAS];
 	for(int i=0; i < N_MEAS;i++)
 	{

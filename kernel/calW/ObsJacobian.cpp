@@ -1,12 +1,10 @@
-#include "../calW/ObsJacobian.h"
+#include "ObsJacobian.h"
 
-void ObsJacobian(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* H)
+void ObsJacobian(Mat_S* prtcl_X, int step, msmt* msmtinfo, fixed_type H[N_MEAS][NUM_VAR])
 {
 #pragma HLS PIPELINE off
 //	cout << "X est\n";
 //	showmat_S(prtcl_X);
-	H->row = N_MEAS; // will be overwritten at the end of function based on n_aoa and n_tdoa
-	H->col = NUM_VAR;
 
 	Mat_S H_temp;
 	H_temp.row = N_MEAS;
@@ -133,7 +131,6 @@ void ObsJacobian(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* H)
 		set_ele_S(&H_temp,i+SN_NUM,1,dely);
 	}
 //	cout << "before re-aligned\n";
-//	showmat_S(H);
 
 
 	// check valid TDOA and AOA measurement.
@@ -145,26 +142,23 @@ void ObsJacobian(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* H)
 		if(msmtinfo->validIdx[i])
 		{
 			for(int j=0; j < NUM_VAR;j++){
-				H->entries[outputIdx*NUM_VAR + j] = H_temp.entries[i*NUM_VAR +j];
+				H[outputIdx][j] = H_temp.entries[i*NUM_VAR +j];
 			}
 			outputIdx++;
-
 		}
 	}
 	if(outputIdx !=  (n_aoa + n_tdoa)){
 		printf("The number of Valid data is not match !!\n");
 		//make it failed fast
 		for(int i=0;  i< N_MEAS;i++){
-			for(int j=0; j < NUM_VAR;j++){
-				H->entries[outputIdx*NUM_VAR + j] = 1023;
+			if(i >= n_aoa+n_tdoa){
+				for(int j=0; j < NUM_VAR;j++){
+					H[i][j] = 1023;
+				}
 			}
 		}
 
 	}
-
-	H->row = n_aoa+n_tdoa;
-	H->col = NUM_VAR;
-
 //	showmat_S(H);
 }
 

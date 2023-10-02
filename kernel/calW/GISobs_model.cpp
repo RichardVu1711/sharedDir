@@ -1,17 +1,11 @@
-#include "../calW/GISobs_model.h"
+#include "GISobs_model.h"
 
-void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* z_cap)
+void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, fixed_type zCap[N_MEAS])
 {
+#pragma HLS PIPELINE off
 	fixed_type SNx[6] = {0,0,-1.9561,-739.8094,-383.0758,-2.3068};
 	// SNx is the location of the sensor node in x-y coordinator
 	// SN1_x SN1_y SN2_x SN2_y SN3_x SN3_y
-
-	for(int i=0; i < N_MEAS;i++)
-	{
-		z_cap->entries[i*NUM_VAR] = 1023;
-	}
-	z_cap->row = N_MEAS;
-	z_cap->col = 1;
 
 	Mat_S z_temp;
 	z_temp.row = N_MEAS;
@@ -99,7 +93,7 @@ void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* z_cap)
 	for(int i=0; i < N_MEAS;i++){
 		if(msmtinfo->validIdx[i])
 		{
-			z_cap->entries[outputIdx*NUM_VAR] = z_temp.entries[i*NUM_VAR];
+			zCap[outputIdx] = z_temp.entries[i*NUM_VAR];
 			outputIdx++;
 
 		}
@@ -109,12 +103,12 @@ void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, Mat_S* z_cap)
 		//make it failed fast
 		for(int i=0;  i< N_MEAS;i++)
 		{
-			z_cap->entries[i*NUM_VAR] = 1023;
+			if(i >= n_aoa+n_tdoa){
+				zCap[i] = 1023;
+			}
 		}
 
 	}
-	z_cap->row = n_aoa + n_tdoa;
-	z_cap->col = 1;
 //	showmat_S(z_cap);
 
 }

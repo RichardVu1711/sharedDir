@@ -14,7 +14,7 @@
 #include "../random_generator/normrnd.h"
 #include "../random_generator/randn.h"
 #include "../resample_pf/resample_pf.h"
-#include "../mvnpdf/mvnpdf_code.h"
+#include "../calweights/mvnpdf_code.h"
 #include "../calweights/Calweights.h"
 #include "../rk4/rk4.h"
 #include "../global_define/GISmsmt_prcs.h"
