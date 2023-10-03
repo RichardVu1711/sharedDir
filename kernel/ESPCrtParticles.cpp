@@ -6,11 +6,13 @@ void store_data_crt(fixed_type X_meanpro[NUM_VAR],
 {
 	for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
+#pragma HLS UNROLL
 		sigMat_out->entries[i] = sigMat[i];
 	}
 
 	for(int i=0; i < NUM_VAR;i++)
 	{
+#pragma HLS UNROLL
 		X_meanpro_out->entries[i*NUM_VAR] = X_meanpro[i];
 	}
 
@@ -51,6 +53,8 @@ void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
     {
         for(int j =0; j <NUM_VAR;j++)
         {
+#pragma HLS UNROLL
+
             set_ele_S(&J,i,j,jacobian[i*  J.row + j]);
         }
     }

@@ -145,7 +145,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(sigMat,p_sigMatOut[0],size_large);
-	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,13*1024,0),13,1024);
+	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 
 	// Copy input for ESPCrtParticles
 	memcpy(p_stateIn[0],state_pro,size_state);
@@ -159,7 +159,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(prtcls,p_prtclsOut[0],size_large);
-	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,13*1024,0),13,1024);
+	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 	cout << "\nFinished Sampling\n";
 
 	// indicating the block is done.
@@ -259,9 +259,9 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 
 	//Note: This is for testing purpose only, please remove it once the functionality is confirmed.
 	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
-	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,6*1024,-1),1024,6);
-	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,36*1024,-1),6*1024,6);
-	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*1024,-1),1,1024);
+	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,N_MEAS*NUM_PARTICLES,-1),NUM_PARTICLES,N_MEAS);
+	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,N_MEAS*N_MEAS*NUM_PARTICLES,-1),N_MEAS*NUM_PARTICLES,N_MEAS);
+	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
 
 	cout << "\nFinished Calculate Pzx Zdiff\n";
 //
@@ -310,8 +310,8 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type wt[NUM_PARTICLE
 	memcpy(state,p_stateOut[0],size_state);
 	memcpy(pxx,p_pxxOut[0],size_pxx);
 
-	write_csv("/mnt/result/state_sol.csv",convert_double(state,1,13,-1),1,13);
-	write_csv("/mnt/result/pxx_sol.csv",convert_double(pxx,1,13*13,-1),13,13);
+	write_csv("/mnt/result/state_sol.csv",convert_double(state,1,NUM_VAR,-1),1,NUM_VAR);
+	write_csv("/mnt/result/pxx_sol.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
 
 	cout << "\nstate= " << state[0] << ", " << state[1] << "\t pxx =" << pxx[0] << ", " << pxx[14] << "\n";
 	cout << "End of : " << step << " with Neff =  "<< N_eff <<".\n";

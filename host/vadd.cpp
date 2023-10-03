@@ -207,11 +207,11 @@ int main(int argc, char* argv[]) {
         fixed_type wt[1*NUM_PARTICLES];
         double N_eff =0;
         fixed_type obs_data[52*10];
-        convert_FP(read_csvMulLine("/mnt/test_data/Init/obsVals.csv",0, 52, 10),
+        convert_FP(read_csvMulLine("/mnt/test_data/Init/obsVals_missing1.csv",0, 52, 10),
         		obs_data, 1, 52*10, -1);
         Mat_S obs;
         init_mat(&obs,1,10);
-		for(int i_step=0; i_step < 52;i_step++)
+		for(int i_step=0; i_step < 1;i_step++)
 		{
 			for(int i=0; i < 10;i++)
 			{
@@ -221,9 +221,9 @@ int main(int argc, char* argv[]) {
 			{
 		        cout << "Phase: initialisation \n";
 		        // only read the first one
-		        convert_FP(read_csvMulLine("/mnt/test_data/Init/prtcls_init.csv",0, NUM_VAR, NUM_PARTICLES),
-											prtcls, NUM_VAR, NUM_PARTICLES, 1);
-		        convert_FP(read_csvMulLine("/mnt/test_data/Init/state_init.csv",0*NUM_VAR, NUM_VAR, 1),
+//		        convert_FP(read_csvMulLine("/mnt/test_data/Init/prtcls_init.csv",0, NUM_VAR, NUM_PARTICLES),
+//											prtcls, NUM_VAR, NUM_PARTICLES, 1);
+		        convert_FP(read_csvMulLine("/mnt/test_data/Init/state_in.csv",0*NUM_VAR, NUM_VAR, 1),
 											state, 1, NUM_VAR, -1);
 		        convert_FP(read_csvMulLine("/mnt/test_data/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
 											pxx, NUM_VAR, NUM_VAR, 0);
