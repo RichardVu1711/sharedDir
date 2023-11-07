@@ -57,26 +57,35 @@ extern size_t size_Rmat;
 extern size_t size_zDiff;
 extern size_t size_pzx;
 
-extern int S_status;
-extern int C_status;
-extern int R_status;
-
 extern xrt::profile::user_range range;
 extern xrt::profile::user_event events;
-extern cl::Event status1;
-extern cl::Event status2;
-extern cl::Event status3;
 
 extern int done;
 extern pthread_t t;
+extern double N_eff;
+
+extern fixed_type Grng_rk4[NUM_VAR*4];
+extern fixed_type Grng_sigma[NUM_VAR*NUM_PARTICLES];
 enum state
 {
+	IDLE = -1,
+	INIT = 0,
     SAMP=1,
     CAL =2,
-	UP =3,
-	IDLE =0
+	UP =3
 };
 typedef enum state state_t;
+
+enum samp_state{
+	SWAIT = -1,
+	SINIT = 0,
+	P1 = 1,
+	P2 = 2,
+	P3 = 3,
+	P4 = 4
+};
+typedef enum samp_state samp_state_t;
+
 int device_setup(int argc, char* argv[],
 				std::vector<cl::Device>& devices_lc,
 			    cl::Device& device_lc,
@@ -91,43 +100,47 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 			int** p_sigMatIn, cl::Buffer &b_sigMatIn,
 			int** p_sigMatOut, cl::Buffer &b_sigMatOut,
 			int** p_rndIn, cl::Buffer &b_rndIn,
-			int** p_prtclsOut, cl::Buffer &b_prtclsOut,
-			cl::Kernel& kSigma,cl::Kernel& kCreate,
-			state_t* s_state, int C_stt,
-			int idx_s, cl::Event* status_S, cl::Event* status_S1);
-
-int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn, fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
+			int** p_prtclsOut, cl::Buffer &b_prtclsOut, fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type prtclsTmp[NUM_VAR*NUM_PARTICLES],
+			int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 			int** p_pxxOut, cl::Buffer &b_pxxOut,
-			fixed_type obs_data[10],
-			int** p_msmtIn, cl::Buffer &b_msmtIn,
+			cl::Kernel& kSigma, cl::Kernel& kCreate,cl::Kernel& k_mPxx,
+			state_t* nstate, samp_state_t* pbS, samp_state_t* nbS,
+			int* Sinit, int S_status, int C_stt,
+			int idx_s, cl::Event* done_S);
+
+int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
+			int** p_pxxOut, int** p_pxxIn, cl::Buffer &b_pxxIn,
+			int** p_msmtIn, cl::Buffer &b_msmtIn, int* n_meas,
 			int** p_RmatIn, cl::Buffer &b_RmatIn,
-			int** p_pxxIn, cl::Buffer &b_pxxIn,
+			fixed_type obs_data[10],
 			int** p_zDiffOut, cl::Buffer &b_zDiffOut,
 			int** p_pzxOut, cl::Buffer &b_pzxOut,
-			int step, double* N_eff,
-			fixed_type wt[NUM_PARTICLES],
-			cl::Kernel k_mPxx, cl::Kernel kCal,
-			state_t* state,	int r_stt,
-			int idx_s);
+			int step,
+			cl::Kernel& kCal,
+			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
+			int* Cinit, int C_status, int r_stt, int* s_stt,
+			int idx_s, cl::Event* done_C);
 
-int block_R( fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES], double N_eff,
+int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES],
+			int n_meas,
+			int** p_zDiff,	int** p_pzx,
 			int** p_prtclsIn, cl::Buffer& b_prtclsIn,
 			int** p_wtIn, cl::Buffer& b_wtIn,
 			int** p_stateOut, cl::Buffer& b_stateOut,
 			int** p_pxxOut, cl::Buffer& b_pxxOut,
-			int** p_stateIn, int** p_pxxIn,
 			fixed_type state[NUM_VAR],
 			fixed_type pxx[NUM_VAR*NUM_VAR],
 			int step,
 			cl::Kernel& kPFU,
-			state_t* state_s,
-			int idx_s);
+			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
+			int* Rinit, int R_status, int* c_stt,
+			int idx_s, cl::Event* done_R);
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
 		fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES]);
 
 void* wait_thread(cl::CommandQueue* q);
-
+void wait_for_enter() ;
 #define OCL_CHECK(error, call)                                                                   \
     call;                                                                                        \
     if (error != CL_SUCCESS) {                                                                   \

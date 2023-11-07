@@ -1,5 +1,10 @@
 #include "host_setup.h"
 
+void wait_for_enter() {
+    std::cout << "Pause the program ...." << std::endl;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
 size_t size_Mat = 1 * sizeof(Mat);
 size_t size_Mat_S = 1 * sizeof(Mat_S);
 size_t size_wt = NUM_PARTICLES*sizeof(fixed_type);
@@ -14,18 +19,11 @@ size_t size_Rmat = N_MEAS*sizeof(fixed_type);
 size_t size_zDiff = NUM_PARTICLES*N_MEAS*sizeof(fixed_type);
 size_t size_pzx = NUM_PARTICLES*N_MEAS*N_MEAS*sizeof(fixed_type);
 
-int S_status =0; // 0 means available
-int C_status =0;
-int R_status =0;
-
-cl::Event status1;
-cl::Event status2;
-cl::Event status3;
-cl::Event status;
-
-int done =0;
+fixed_type Grng_rk4[NUM_VAR*4];
+fixed_type Grng_sigma[NUM_VAR*NUM_PARTICLES];
 pthread_t t;
 
+double N_eff =0;
 std::vector<cl::Event> waitList;
 
 xrt::profile::user_range range;
@@ -38,7 +36,6 @@ void* wait_thread(void *thread_arg)
 	cl::CommandQueue* q = (cl::CommandQueue*) thread_arg;
 	cout << "\n Im inside a thread \n";
 	OCL_CHECK(err, err = q[0].finish());
-	done = 1;
 	cout << "Thread is done \n";
 	pthread_exit(NULL);
 
@@ -193,189 +190,211 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 			int** p_sigMatIn, cl::Buffer &b_sigMatIn,
 			int** p_sigMatOut, cl::Buffer &b_sigMatOut,
 			int** p_rndIn, cl::Buffer &b_rndIn,
-			int** p_prtclsOut, cl::Buffer &b_prtclsOut,
-			cl::Kernel& kSigma,cl::Kernel& kCreate,
-			state_t* s_state, int C_stt,
-			int idx_s, cl::Event* status_S, cl::Event* status_S1)
+			int** p_prtclsOut, cl::Buffer &b_prtclsOut, fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type prtclsTmp[NUM_VAR*NUM_PARTICLES],
+			int** p_prtclsIn, cl::Buffer &b_prtclsIn,
+			int** p_pxxOut, cl::Buffer &b_pxxOut,
+			cl::Kernel& kSigma, cl::Kernel& kCreate,cl::Kernel& k_mPxx,
+			state_t* nstate, samp_state_t* pbS, samp_state_t* nbS,
+			int* Sinit, int S_status, int C_stt,
+			int idx_s, cl::Event* done_S)
 {
 
 	// copy input for sigmaComp block
 	// BUG status, stt_1, or stt_2 won't be saved
 	cl_int err;
-	cl_int stt_1;
 	fixed_type state_pro[NUM_VAR];	//essential variable for rk4
+	fixed_type mPxx[NUM_VAR*NUM_VAR];	//essential variable for rk4
 
-	if(S_status==0){
-		if(s_state[0] == SAMP){
-			S_status = 1;
-			fixed_type rnd_rk4[4*NUM_VAR];
-			fixed_type rnd[NUM_VAR*NUM_PARTICLES];
-			rng(rnd_rk4,rnd);
-
-			memcpy(&pM_pxxIn[0][0],pxx,size_pxx);
-			memcpy(&p_rndIn[0][0],rnd,size_large);
-			OCL_CHECK(err, err = kCreate.setArg(0,b_stateIn));
-			OCL_CHECK(err, err = kCreate.setArg(1,b_sigMatIn));
-			OCL_CHECK(err, err = kCreate.setArg(2,b_prtclsOut));
-			// execute sigmaComp Block
-			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({bM_pxxIn,b_rndIn},0/* 0 means from host*/));
-			OCL_CHECK(err, err = q[idx_s].enqueueTask(kSigma));
-			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_sigMatOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,status_S));
-
-//			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_stateIn,b_sigMatIn},0/* 0 means from host*/));
-//			OCL_CHECK(err, err = q[idx_s].enqueueTask(kCreate));
-//			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,status_S));
-
-
-			// starting triggering rk4
-			Mat_S stateOut_pro;
-			Mat_S M_state;
-			M_state.col = 1;
-			M_state.row = NUM_VAR;
-			for(int i=0; i < 13;i++)
-			{
-				M_state.entries[i*NUM_VAR] = state[i];
-			}
-			rk4(&M_state,&stateOut_pro,rnd_rk4);
-
-			// copy output of rk4
-			for(int i=0; i < NUM_VAR;i++)
-			{
-				state_pro[i] = stateOut_pro.entries[i*NUM_VAR];
-			}
-		}
-	}
-	else if(S_status == 1)
+	int tracking = 0;	// keep tracking states of block_S
+								// I used this variable as
+	switch(pbS[0])
 	{
-		cl_int p1Done;
-		OCL_CHECK(err, err = status_S[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &p1Done));
-		if((p1Done == CL_COMPLETE)){
-			S_status =2;
-//			clReleaseEvent(status_S[0]);
+	case SINIT:{
+		tracking =0;
+		//copy data required for this block
+		memcpy(&pM_pxxIn[0][0],pxx,size_pxx);
+		string  pxx_dir = "/mnt/result/pxx"+to_string(idx_s) +".csv";
+		string  state_dir = "/mnt/result/state"+to_string(idx_s) +".csv";
 
-		}
-//		S_status =2;
+		write_csv(pxx_dir,convert_double(pxx,1,13*13,-1),13,13);
+		write_csv(state_dir,convert_double(state,1,13*1,-1),1,13);
+
+		nbS[0] = P1;
+		Sinit[0] = 1;
+		// put here as a safe state.
 	}
-	//"wait for the sigmaComp Block finalised.\n";
-	else if(S_status ==2)
-	{
-		S_status =3;
-		fixed_type sigMat[NUM_VAR*NUM_PARTICLES];
-		// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
-		memcpy(sigMat,&p_sigMatOut[0][0],size_large);
-		write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,13*1024,-1),1,13*1024);
-		write_csv("/mnt/result/state_pro.csv",convert_double(state_pro,1,13*1,-1),1,13);
+	break;
+	case P1:{
+		tracking =1;
+		fixed_type rnd[NUM_VAR*NUM_PARTICLES];
+		fixed_type rnd_rk4[4*NUM_VAR];
+		rng(rnd_rk4,rnd);
+		memcpy(&p_rndIn[0][0],rnd,size_large);
+
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({bM_pxxIn,b_rndIn},0/* 0 means from host*/));
+		OCL_CHECK(err, err = q[idx_s].enqueueTask(kSigma));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_sigMatOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,done_S));
+		// starting triggering rk4
+		Mat_S stateOut_pro;
+		Mat_S M_state;
+		M_state.col = 1;
+		M_state.row = NUM_VAR;
+		for(int i=0; i < 13;i++)
+		{
+			M_state.entries[i*NUM_VAR] = state[i];
+		}
+		rk4(&M_state,&stateOut_pro,rnd_rk4);
+
+		// copy output of rk4
+		for(int i=0; i < NUM_VAR;i++)
+		{
+			state_pro[i] = stateOut_pro.entries[i*NUM_VAR];
+		}
+		memcpy(p_stateIn[0],state_pro,size_state);
+
+
+		// check if KSigma is finished
+		cl_int stt;
+		OCL_CHECK(err, err = done_S[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &stt));
+		if(stt == CL_COMPLETE)	nbS[0] = P2;
+		else nbS[0] = SWAIT;	// wait for KSigma Finished.
+	}
+	break;
+	case P2:{
+		tracking =2;
 
 		// Copy input for ESPCrtParticles
-		memcpy(p_stateIn[0],state_pro,size_state);
 		memcpy(p_sigMatIn[0],p_sigMatOut[0],size_large);
 
 		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_stateIn,b_sigMatIn},0/* 0 means from host*/));
 		OCL_CHECK(err, err = q[idx_s].enqueueTask(kCreate));
-		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,&status_S1[0]));
-//		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({bM_pxxIn,b_rndIn},0/* 0 means from host*/));
-//		OCL_CHECK(err, err = q[idx_s].enqueueTask(kSigma));
-//		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_sigMatOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,status_S1));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,done_S));
+
+		memcpy(prtcls,p_prtclsOut[0],size_large);
+		cl_int pdone;
+		OCL_CHECK(err, err = done_S[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+		if(pdone == CL_COMPLETE)	nbS[0] = P3;
+		else nbS[0] = SWAIT;	// wait for KSigma Finished.
+	}
+	break;
+	case P3:{
+		tracking =3;
+	    OCL_CHECK(err, cl::Buffer b_prtclsTemp(context, CL_MEM_READ_ONLY, size_large, NULL, &err));
+	    int *p_prtclsTemp;
+	    OCL_CHECK(err, err = k_mPxx.setArg(0,b_prtclsTemp));
+		buf_link(&p_prtclsTemp,b_prtclsTemp,size_large,WBUF,1);
+
+		memcpy(p_prtclsTemp,p_prtclsOut[0],size_large);
+
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsTemp},0/* 0 means from host*/));
+		OCL_CHECK(err, err = q[idx_s].enqueueTask(k_mPxx));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_pxxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,done_S));
+
+		cl_int pdone;
+		OCL_CHECK(err, err = done_S[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+		if(pdone == CL_COMPLETE)	nbS[0] = P4;
+		else nbS[0] = SWAIT;	// wait for KSigma Finished.
 
 	}
-	else if(S_status ==3){
-	// NOTE  need to check if a queue is done or not, if not ignore whatever coming.
-		cl_int p2Done;
-		OCL_CHECK(err, err = status_S1[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &p2Done));
-		if((p2Done == CL_COMPLETE)){
-			S_status =4;
-			fixed_type prtcls[13*1024];
-			memcpy(prtcls,p_prtclsOut[0],size_large);
-			write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,13*1024,-1),13,1024);
+	break;
+	case P4:{
+		// check if the Block C is ready, preparing for the tranfering.
+		tracking =4;
+		if(C_stt == 0){
+			nstate[0] = CAL;
+			Sinit[0] =0;
+			fixed_type sigMat[NUM_VAR*NUM_PARTICLES];
+
+			// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
+			memcpy(sigMat,&p_sigMatOut[0][0],size_large);
+			memcpy(state_pro,&p_stateIn[0][0],size_state);
+			memcpy(prtcls,&p_prtclsOut[0][0],size_large);
+			memcpy(prtclsTmp,&p_prtclsOut[0][0],size_large);
+			memcpy(mPxx,&p_pxxOut[0][0],size_pxx);
+			string  sigMat_dir = "/mnt/result/sigMat"+to_string(idx_s) +".csv";
+			string  prtcls_dir = "/mnt/result/prtcls"+to_string(idx_s) +".csv";
+			string  state_pro_dir = "/mnt/result/state_pro"+to_string(idx_s) +".csv";
+			string  mPxx_dir = "/mnt/result/mPxx"+to_string(idx_s) +".csv";
+
+			write_csv(sigMat_dir,convert_double(sigMat,1,13*1024,-1),13,1024);
+			write_csv(state_pro_dir,convert_double(state_pro,1,13*1,-1),1,13);
+			write_csv(prtcls_dir,convert_double(prtcls,1,13*1024,-1),13,1024);
+			write_csv(mPxx_dir,convert_double(mPxx,1,13*13,-1),13,13);
+
 		}
+		else{nstate[0] = SAMP;}
+		nbS[0] = SWAIT;	// wait for KSigma Finished.
 	}
-	else if(S_status ==4){
-		if(idx_s == 0){
-			s_state[idx_s] = CAL;
-			S_status = 0;
-		}
-		else{
-			//check if the next block is available
-			if(C_status ==0){
-				s_state[idx_s] =CAL;
-				S_status =0;
+	break;
+	case SWAIT:{
+		tracking = S_status;
+		if((tracking == 1) || (tracking == 2) || (tracking == 3) )
+		{
+			cl_int pdone;
+			OCL_CHECK(err, err = done_S[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+			if(pdone == CL_COMPLETE){
+				if(tracking == 1){
+					nbS[0] = P2;
+				}
+				else if(tracking ==  2){
+					nbS[0] = P3;
+				}
+				else if(tracking ==  3){
+					nbS[0] = P4;
+				}
+				done_S[0] = cl::Event();
+
+			}
+			// if not done, then keep sleeping
+			else{
+				nbS[0] = SWAIT;
 			}
 		}
+		else if(tracking == 0)
+		{
+			nbS[0] = SINIT;
+		}
+		else if(tracking == 4)
+		{
+			nbS[0] = P4;
+		}
+		else
+		{
+			cout << "\n Some Weird states at SAMP state, status = " << tracking << "\n";
+			return -1;
+		}
 	}
-	else{
-		cout << "\nSomething goes wrong @ Block_S\n";
-		return -1;
+	break;
 	}
-
-	// indicating the block is done.
-	return S_status;
+	pbS[0] = nbS[0];
+	return tracking;
 
 }
 
-int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn, fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
-			int** p_pxxOut, cl::Buffer &b_pxxOut,
-			fixed_type obs_data[10],
-			int** p_msmtIn, cl::Buffer &b_msmtIn,
+int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
+			int** p_pxxOut, int** p_pxxIn, cl::Buffer &b_pxxIn,
+			int** p_msmtIn, cl::Buffer &b_msmtIn, int* n_meas,
 			int** p_RmatIn, cl::Buffer &b_RmatIn,
-			int** p_pxxIn, cl::Buffer &b_pxxIn,
+			fixed_type obs_data[10],
 			int** p_zDiffOut, cl::Buffer &b_zDiffOut,
 			int** p_pzxOut, cl::Buffer &b_pzxOut,
-			int step, double* N_eff,
-			fixed_type wt[NUM_PARTICLES],
-			cl::Kernel k_mPxx, cl::Kernel kCal,
-			state_t* state,	int r_stt,
-			int idx_s)
+			int step, cl::Kernel& kCal,
+			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
+			int* Cinit, int C_status, int r_stt, int* s_stt,
+			int idx_s, cl::Event* done_C)
 {
+
 	cl_int err;
-	cl_int stt_1;
 	msmt msmtinfo;
 	Mat_S Rmat;
 	fixed_type R [N_MEAS];
 	fixed_type zDiff[NUM_PARTICLES*N_MEAS];
 	fixed_type pzx[NUM_PARTICLES*N_MEAS*N_MEAS];
-	if(C_status==0){
-		if(state[0] == CAL){
-			C_status = 1;
-			memcpy(p_prtclsIn[0],p_prtclsOut[0],size_large);
 
-			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsIn},0/* 0 means from host*/));
-			OCL_CHECK(err, err = q[idx_s].enqueueNDRangeKernel(k_mPxx,0,1,1,NULL,NULL));
-			OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_pxxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,&status2));
-			waitList.push_back(status);
-
-		}
-	}
-	else if(C_status==1)
+	int tracking =0;
+	switch(pbC[0])
 	{
-//		memcpy(prtcls,p_prtclsOut[0],size_large);
-//		OCL_CHECK(err, err = status2.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &stt_1));
-		if(done == 1) {
-			C_status =2;
-			fixed_type pxx[169];
-			memcpy(pxx,p_pxxOut[0],size_pxx);
-			cout << "Done is finalised";
-			cout << "pxx " << pxx[0] << ", " << pxx[168] << "\n";
-
-		}
-		else if(done ==0)
-		{
-			pthread_create(&t, NULL, &wait_thread, (void*) &q[idx_s]);
-			done = -1;
-		}
-		else
-		{
-			//done nothing. Keep waiting
-		}
-//		if(stt_1==CL_COMPLETE)
-//		{
-//		    C_status =2;
-////			memcpy(p_pxxIn[0],p_pxxOut[0],size_pxx);
-//		}
-	}
-	else if(C_status ==2)
-	{
-		C_status = 3;
-
+	case INIT:{
 		msmtinfo = msmt_prcs(obs_data);
 		Rmat = R_cal(&msmtinfo);
 
@@ -383,47 +402,139 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn, fixed_ty
 		{
 			R[i] = Rmat.entries[i*NUM_VAR+i];
 		}
+		n_meas[0] = msmtinfo.n_aoa + msmtinfo.n_tdoa;
 		memcpy(p_msmtIn[0],&msmtinfo,size_msmt);
 		memcpy(p_RmatIn[0],R,size_Rmat);
 		memcpy(p_pxxIn[0],p_pxxOut[0],size_pxx);
-		fixed_type pxx[169];
-		memcpy(pxx,p_pxxOut[0],size_pxx);
 
-		cout << "pxx " << pxx[0] << ", " << pxx[168] << "\n";
+		// For debugging Purpose
+//		fixed_type pxx[169];
+//		memcpy(pxx,p_pxxOut[0],size_pxx);
+
+		tracking =0;
+		Cinit[0] = 1;
+		nbC[0] = P1;
+		// free block S
+		s_stt[0] = 0;
+	}
+	break;
+	case P1:{
+		tracking =1;
+
+		// copy new particles before it is destroyed by the previous S block.
+		OCL_CHECK(err, cl::Buffer b_prtclsTemp(context, CL_MEM_READ_ONLY, size_large, NULL, &err));
+		int *p_prtclsTemp;
+		buf_link(&p_prtclsTemp,b_prtclsTemp,size_large,WBUF,1);
+		memcpy(p_prtclsTemp,prtcls,size_large);
+
 		OCL_CHECK(err, err = kCal.setArg(3,step));
-		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsIn,b_msmtIn,b_RmatIn,b_pxxIn},0/* 0 means from host*/));
-		OCL_CHECK(err, err = q[idx_s].enqueueNDRangeKernel(kCal,0,1,1,NULL,NULL));
-		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_zDiffOut,b_pzxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,&status2));
+	    OCL_CHECK(err, err = kCal.setArg(0,b_prtclsTemp));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsTemp,b_msmtIn,b_RmatIn,b_pxxIn},0/* 0 means from host*/));
+		OCL_CHECK(err, err = q[idx_s].enqueueTask(kCal));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_zDiffOut,b_pzxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,done_C));
+
+		cl_int pdone;
+		OCL_CHECK(err, err = done_C[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+		if(pdone == CL_COMPLETE)	nbC[0] = P2;
+		else nbC[0] = SWAIT;	// wait for KSigma Finished.
 
 	}
-	else if(C_status == 3)
-	{
-	    OCL_CHECK(err, err = status2.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &stt_1))
-
-
-		if(done == 1) {
-//	    if(stt_1==CL_COMPLETE) {
-//	        OCL_CHECK(err, err = q[idx_s].finish());
-	    	C_status =4;
-	    	memcpy(zDiff,p_zDiffOut[0],size_zDiff);
+	break;
+	case P2:{
+		tracking =2;
+		if(r_stt == 0){
+			// after moving to new block.
+			// C tracking is still != 0;
+			// This ensures that block would be operated if it is not ready yet.
+			nstate[0] = UP;
+			Cinit[0] = 0;
+			// check functionality
+			memcpy(zDiff,p_zDiffOut[0],size_zDiff);
 			memcpy(pzx,p_pzxOut[0],size_pzx);
-			cout << "pzx= " << pzx[0] << ", " << pzx[35] << "\n";
-	    }
-		else if(done ==0)
-		{
-			pthread_create(&t, NULL, &wait_thread, (void*) &q[idx_s]);
-			done = -1;
+			string  zDiff_dir = "/mnt/result/zDiff"+to_string(idx_s) +".csv";
+			string  pzx_dir = "/mnt/result/pzx"+to_string(idx_s) +".csv";
+
+			write_csv(zDiff_dir,convert_double(zDiff,1,6*1024,-1),1024,6);
+			write_csv(pzx_dir,convert_double(pzx,1,36*1024,-1),6*1024,6);
+		}
+		else{
+			nstate[0] = CAL;
+		}
+		nbC[0] = SWAIT;
+	}
+	break;
+	case SWAIT:{
+		tracking =C_status;
+		if(tracking == 1){
+			//check if the PL is finished.
+			cl_int pdone;
+			OCL_CHECK(err, err = done_C[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+			if(pdone == CL_COMPLETE){
+				if(tracking == 1){
+					//The PL is finished, let move to next phase
+					nbC[0] = P2;
+				}
+				// empty this flag as a safety procedure (can't not read if there is no PL run).
+				done_C[0] = cl::Event();
+			}
+			else{
+				// next block is not finished => move to the next block
+				nbC[0] = SWAIT;
+			}
+		}
+		else if(tracking == 0){
+			nbC[0] = SINIT;
+
+		}
+		else if(tracking == 2){
+			nbC[0] = P2;
+		}
+		else{
+			cout << "\n Some Weird states at CAL state, status = " << tracking << "\n";
+			return -1;
 		}
 
 	}
-	// NOTE START FROM HERE PLEASE
-	// get the status is here!!!
+	break;
+	default:
+		cout << "Some Werid state at CAL, with pbC ==" << pbC << " \n";
+		return -1023;
+	break;
+	}
+	pbC[0] = nbC[0];
+	return tracking;
+}
 
-	else if(C_status ==4)
-	{
-		C_status =5;
-		fixed_type sum_fp =0;
-		int n_obs = msmtinfo.n_aoa + msmtinfo.n_tdoa;
+int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES],
+			int n_meas,
+			int** p_zDiff,	int** p_pzx,
+			int** p_prtclsIn, cl::Buffer& b_prtclsIn,
+			int** p_wtIn, cl::Buffer& b_wtIn,
+			int** p_stateOut, cl::Buffer& b_stateOut,
+			int** p_pxxOut, cl::Buffer& b_pxxOut,
+			fixed_type state[NUM_VAR],
+			fixed_type pxx[NUM_VAR*NUM_VAR],
+			int step,
+			cl::Kernel& kPFU,
+			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
+			int* Rinit, int R_status, int* c_stt,
+			int idx_s, cl::Event* done_R)
+{
+	fixed_type pzx[N_MEAS*N_MEAS*NUM_PARTICLES];
+	fixed_type zDiff[1*N_MEAS*NUM_PARTICLES];
+	cl_int err;
+
+	fixed_type sum_fp =0;
+	int tracking =0;
+	int n_obs = n_meas;
+
+	switch(pbR[0]){
+	case SINIT:{
+		memcpy(zDiff,p_zDiff[0],size_zDiff);
+		memcpy(pzx,p_pzx[0],size_pzx);
+//		cout << "zDiff" << zDiff[0] << ", " << zDiff[1] << "\n";
+//		cout << "pzx:" << pzx[0] << ", " << pzx[35] << "\n";
+//		wait_for_enter();
 		for(int i=0; i <NUM_PARTICLES;i++){
 			double zDiff_du[N_MEAS];
 			double pzx_du[N_MEAS][N_MEAS];
@@ -450,113 +561,99 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn, fixed_ty
 			double temp2 = wt[j];
 			re_sum += (temp2*temp2);
 		}
-		N_eff[0] = 1/re_sum;
-		memcpy(prtcls,p_prtclsOut[0],size_large);
-	}
-	// status 6 in here to determine whether should we move into the next state
-	else if(C_status ==5){
-		if(idx_s ==0){
-			// first block always can go forward
-			state[0] = UP;
-			C_status =0;
-		}
-		else
-		{
-			if((r_stt == 0)||(r_stt == 5)){
-				state[0] = UP;
-				C_status =0;
-			}
-			else{
-				// wait in here and until the next block is available
-			}
-		}
-	}
-
-	else{
-		cout << "\n There's a bug at Block_C \n";
-		return -1;
-	}
-
-
-	//Note: This is for testing purpose only, please remove it once the functionality is confirmed.
-	//write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,6*1024,-1),1024,6);
-	//write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,36*1024,-1),6*1024,6);
-	//write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*1024,-1),1,1024);
-
-//	cout << "\nPzx: " << pzx[0] << ", " << pzx[28] << ", " << pzx[35] << "\n";
-//	cout << "\nzDiff: " << zDiff[0] << ", " << zDiff[1] << ", " << zDiff[4] << "\n";
-//	cout << "\nWt: " << wt[0] << ", " << wt[1] << ", " << wt[2] << "\n";
-
-	return C_status;
-
-}
-
-int block_R( fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES], double N_eff,
-			int** p_prtclsIn, cl::Buffer& b_prtclsIn,
-			int** p_wtIn, cl::Buffer& b_wtIn,
-			int** p_stateOut, cl::Buffer& b_stateOut,
-			int** p_pxxOut, cl::Buffer& b_pxxOut,
-			int** p_stateIn, int** p_pxxIn,
-			fixed_type state[NUM_VAR],
-			fixed_type pxx[NUM_VAR*NUM_VAR],
-			int step,
-			cl::Kernel& kPFU,
-			state_t* state_s,
-			int idx_s)
-{
-	cl_int err;
-	cl_int stt_1;
-	if(R_status ==0)
-	{
-		C_status =0;
-	    R_status =1;
+		N_eff = 1.0/re_sum;
 
 		if(N_eff < NUM_PARTICLES*0.5 || N_eff > DBL_MAX*0.5){
 			double rnd_temp;
 			randn(&rnd_temp,0,0);
 			fixed_type rnd_rsmp = rnd_temp;
-			//THIS COULD CREATE A BUG AS p_prtclsIn is a read buffer.
 			resamplePF_wrap(prtcls,wt,rnd_rsmp);
 			memcpy(p_prtclsIn[0],prtcls,size_large);
 			cout << "resample required\n";
 		}
 		memcpy(p_wtIn[0], wt,size_wt);
+		memcpy(p_prtclsIn[0], prtcls, size_large);
+		std::string wt_dir = "/mnt/result/wtOut" + to_string(idx_s) + ".csv";
+		write_csv(wt_dir,convert_double(wt,1,1024,-1),1,1024);
+		write_csv("/mnt/result/prtclsUOut.csv",convert_double(prtcls,1,13*1024,-1),13,1024);
+
+		// free block C
+		tracking =0;
+		Rinit[0] = 1;
+		nbR[0] = P1;
+		c_stt[0] = 0;
+	}
+	break;
+
+	case P1:{
+		tracking =1;
 		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_prtclsIn,b_wtIn},0/* 0 means from host*/));
-		OCL_CHECK(err, err = q[idx_s].enqueueNDRangeKernel(kPFU,0,1,1,NULL,NULL));
-		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_stateOut,b_pxxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,&status3));
-	}
-	else if(R_status == 1){
-	    OCL_CHECK(err, err = status3.getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &stt_1));
-		if(stt_1==CL_COMPLETE){
-			memcpy(p_stateIn[0],p_stateOut[0],size_state);
-			memcpy(p_pxxIn[0],p_pxxOut[0],size_pxx);
-			R_status =3;
-		}
+		OCL_CHECK(err, err = q[idx_s].enqueueTask(kPFU));
+		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({b_stateOut,b_pxxOut},CL_MIGRATE_MEM_OBJECT_HOST,NULL,done_R));
+		cl_int pdone;
+		OCL_CHECK(err, err = done_R[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+		if(pdone == CL_COMPLETE)	nbR[0] = P2;
+		else nbR[0] = SWAIT;	// wait for kPFU Finished.
 
 	}
-	else if(R_status ==3)
-	{
-	    R_status =4;
-		stt_1 = CL_SUBMITTED;
-
-
-
-		// This code is requiremment as we need to store the solution!
+		break;
+	case P2:{
+		tracking =2;
+		cout << "\n\ntracking = 2\n";
+		// after moving to new block.
+		// C tracking is still != 0;
+		// This ensures that block would be operated if it is not ready yet.
+		nstate[0] = IDLE;
+		pstate[0] = IDLE;
+		Rinit[0] = 0;
+		q[idx_s].finish();
 		memcpy(state,p_stateOut[0],size_state);
 		memcpy(pxx,p_pxxOut[0],size_pxx);
-
-		write_csv("/mnt/result/state_sol.csv",convert_double(state,1,13,-1),1,13);
-		write_csv("/mnt/result/pxx_sol.csv",convert_double(pxx,1,13*13,-1),13,13);
-
+		// check functionality
+		std::string state_dir = "/mnt/result/stateOut" + to_string(idx_s) + ".csv";
+		std::string pxx_dir = "/mnt/result/pxxOut" + to_string(idx_s) + ".csv";
+		write_csv(state_dir,convert_double(state,1,13,-1),1,13);
+		write_csv(pxx_dir,convert_double(pxx,13,13,-1),13,13);
 		cout << "\nstate= " << state[0] << ", " << state[1] << "\t pxx =" << pxx[0] << ", " << pxx[14] << "\n";
-		cout << "End of : " << step << " with Neff =  "<< N_eff <<" at src = " << idx_s << " .\n";
+		cout << "End of : " << step << " with Neff =  "<< N_eff <<".\n";
+		nbR[0] = SWAIT;	// wait for KSigma Finished.
+		tracking =0;
 	}
-	else if(R_status ==4)
-	{
-		R_status =0;
-		state_s[idx_s] = IDLE;
+		break;
+	case SWAIT:{
+		tracking =R_status;
+		if(tracking == 1){
+			cl_int pdone;
+			OCL_CHECK(err, err = done_R[0].getInfo(CL_EVENT_COMMAND_EXECUTION_STATUS, &pdone));
+			if(pdone == CL_COMPLETE){
+				nbR[0] = P2;
+				done_R[0] = cl::Event();
+			}
+			else{
+				nbR[0] = SWAIT;
+			}
+		}
+		else if(tracking == 0){
+			nbR[0] = SINIT;
+
+		}
+		else if(tracking == 2){
+			nbR[0] = P2;
+		}
+		else{
+			cout << "\n Some Weird states at UPD state, status = " << tracking << "\n";
+			return -1;
+		}
 	}
-	return R_status;
+	break;
+	default:
+		cout << "\n Some Weird states at UPD state, status = " << tracking << "\n";
+		break;
+		return -1023;
+	}
+
+	pbR[0] = nbR[0];
+	return tracking;
 }
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
@@ -564,15 +661,20 @@ void rng(fixed_type rnd_rk4[NUM_VAR],
 {
 	for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++){
 //				double rnd_temp = norm(urbg);
-		double rnd_temp;
-		randn(&rnd_temp,0,0);
-		rnd_sigma[i] = rnd_temp;
+//		double rnd_temp;
+//		randn(&rnd_temp,0,0);
+//		rnd_sigma[i] = rnd_temp;
+		rnd_sigma[i] = Grng_sigma[i];
+
 	}
+	write_csv("/mnt/result/rngSigma.csv" ,convert_double(rnd_sigma,13,1024,-1),13,1024);
+
 
 	for(int i=0; i< NUM_VAR*4;i++){
 //				double rnd_temp = norm(urbg);
-		double rnd_temp;
-		randn(&rnd_temp,0,0);
-		rnd_rk4[i] = rnd_temp;
+//		double rnd_temp;
+//		randn(&rnd_temp,0,0);
+//		rnd_rk4[i] = rnd_temp;
+		rnd_rk4[i] = Grng_rk4[i];
 	}
 }
