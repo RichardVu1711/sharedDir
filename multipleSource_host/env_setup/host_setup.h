@@ -15,12 +15,12 @@
 #include "../global_define/read_write_csv.h"
 #include "../global_define/mat_lib.h"
 #include "../random_generator/normrnd.h"
-#include "../random_generator/randn.h"
+#include "../random_generator/RNG_withSeed.h"
 #include "../resample_pf/resample_pf.h"
-#include "../mvnpdf/mvnpdf_code.h"
+#include "../calweights/mvnpdf_code.h"
 #include "../calweights/Calweights.h"
 #include "../rk4/rk4.h"
-#include "../GISmsmt_prcs.h"
+#include "../global_define/GISmsmt_prcs.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -64,8 +64,8 @@ extern int done;
 extern pthread_t t;
 extern double N_eff;
 
-extern fixed_type Grng_rk4[NUM_VAR*4];
-extern fixed_type Grng_sigma[NUM_VAR*NUM_PARTICLES];
+//extern fixed_type Grng_rk4[NUM_VAR*4];
+//extern fixed_type Grng_sigma[NUM_VAR*NUM_PARTICLES];
 enum state
 {
 	IDLE = -1,
@@ -106,7 +106,8 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 			cl::Kernel& kSigma, cl::Kernel& kCreate,cl::Kernel& k_mPxx,
 			state_t* nstate, samp_state_t* pbS, samp_state_t* nbS,
 			int* Sinit, int S_status, int C_stt,
-			int idx_s, cl::Event* done_S);
+			int idx_s, cl::Event* done_S,
+			int i_step, int i_run);
 
 int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			int** p_pxxOut, int** p_pxxIn, cl::Buffer &b_pxxIn,
@@ -119,7 +120,8 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			cl::Kernel& kCal,
 			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
 			int* Cinit, int C_status, int r_stt, int* s_stt,
-			int idx_s, cl::Event* done_C);
+			int idx_s, cl::Event* done_C,
+			fixed_type cAvg[N_MEAS],fixed_type nAvg[N_MEAS]);
 
 int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES],
 			int n_meas,
@@ -134,10 +136,12 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 			cl::Kernel& kPFU,
 			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
 			int* Rinit, int R_status, int* c_stt,
-			int idx_s, cl::Event* done_R);
+			int idx_s, cl::Event* done_R,
+			int i_run);
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
-		fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES]);
+		 fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES],
+		 int i_step, int i_run);
 
 void* wait_thread(cl::CommandQueue* q);
 void wait_for_enter() ;

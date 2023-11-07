@@ -26,8 +26,8 @@ pthread_t t;
 double N_eff =0;
 std::vector<cl::Event> waitList;
 
-xrt::profile::user_range range;
-xrt::profile::user_event events;
+//xrt::profile::user_range range;
+//xrt::profile::user_event events;
 // An event callback function that prints the operations performed by the OpenCL
 // runtime.
 void* wait_thread(void *thread_arg)
@@ -196,7 +196,8 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 			cl::Kernel& kSigma, cl::Kernel& kCreate,cl::Kernel& k_mPxx,
 			state_t* nstate, samp_state_t* pbS, samp_state_t* nbS,
 			int* Sinit, int S_status, int C_stt,
-			int idx_s, cl::Event* done_S)
+			int idx_s, cl::Event* done_S,
+			int i_step, int i_run)
 {
 
 	// copy input for sigmaComp block
@@ -216,8 +217,8 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 		string  pxx_dir = "/mnt/result/pxx"+to_string(idx_s) +".csv";
 		string  state_dir = "/mnt/result/state"+to_string(idx_s) +".csv";
 
-		write_csv(pxx_dir,convert_double(pxx,1,13*13,-1),13,13);
-		write_csv(state_dir,convert_double(state,1,13*1,-1),1,13);
+		write_csv(pxx_dir,convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
+		write_csv(state_dir,convert_double(state,1,NUM_VAR*1,-1),1,NUM_VAR);
 
 		nbS[0] = P1;
 		Sinit[0] = 1;
@@ -228,7 +229,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 		tracking =1;
 		fixed_type rnd[NUM_VAR*NUM_PARTICLES];
 		fixed_type rnd_rk4[4*NUM_VAR];
-		rng(rnd_rk4,rnd);
+		rng(rnd_rk4,rnd,i_step,i_run);
 		memcpy(&p_rndIn[0][0],rnd,size_large);
 
 		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({bM_pxxIn,b_rndIn},0/* 0 means from host*/));
@@ -381,7 +382,8 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			int step, cl::Kernel& kCal,
 			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
 			int* Cinit, int C_status, int r_stt, int* s_stt,
-			int idx_s, cl::Event* done_C)
+			int idx_s, cl::Event* done_C,
+			fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS])
 {
 
 	cl_int err;
@@ -395,8 +397,8 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 	switch(pbC[0])
 	{
 	case INIT:{
-		msmtinfo = msmt_prcs(obs_data);
-		Rmat = R_cal(&msmtinfo);
+		msmt msmtinfo = msmt_prcs(obs_data,step+1,cAvg,nAvg);
+		Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
 
 		for(int i=0; i < N_MEAS;i++)
 		{
@@ -518,7 +520,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 			cl::Kernel& kPFU,
 			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
 			int* Rinit, int R_status, int* c_stt,
-			int idx_s, cl::Event* done_R)
+			int idx_s, cl::Event* done_R, int i_run)
 {
 	fixed_type pzx[N_MEAS*N_MEAS*NUM_PARTICLES];
 	fixed_type zDiff[1*N_MEAS*NUM_PARTICLES];
@@ -534,7 +536,6 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 		memcpy(pzx,p_pzx[0],size_pzx);
 //		cout << "zDiff" << zDiff[0] << ", " << zDiff[1] << "\n";
 //		cout << "pzx:" << pzx[0] << ", " << pzx[35] << "\n";
-//		wait_for_enter();
 		for(int i=0; i <NUM_PARTICLES;i++){
 			double zDiff_du[N_MEAS];
 			double pzx_du[N_MEAS][N_MEAS];
@@ -565,7 +566,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 
 		if(N_eff < NUM_PARTICLES*0.5 || N_eff > DBL_MAX*0.5){
 			double rnd_temp;
-			randn(&rnd_temp,0,0);
+			rnd_temp =  RNG_withSeed(0,i_run);
 			fixed_type rnd_rsmp = rnd_temp;
 			resamplePF_wrap(prtcls,wt,rnd_rsmp);
 			memcpy(p_prtclsIn[0],prtcls,size_large);
@@ -657,24 +658,23 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 }
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
-		 fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES])
+		 fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES],
+		 int i_step, int i_run)
 {
 	for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++){
-//				double rnd_temp = norm(urbg);
-//		double rnd_temp;
-//		randn(&rnd_temp,0,0);
-//		rnd_sigma[i] = rnd_temp;
-		rnd_sigma[i] = Grng_sigma[i];
-
+		double rnd_temp;
+		if((i_step == 0)&&(i==0))
+			rnd_temp =  RNG_withSeed(1,i_run);
+		else
+			rnd_temp =  RNG_withSeed(0,i_run);
+		rnd_sigma[i] = rnd_temp;
 	}
-	write_csv("/mnt/result/rngSigma.csv" ,convert_double(rnd_sigma,13,1024,-1),13,1024);
-
 
 	for(int i=0; i< NUM_VAR*4;i++){
-//				double rnd_temp = norm(urbg);
-//		double rnd_temp;
-//		randn(&rnd_temp,0,0);
-//		rnd_rk4[i] = rnd_temp;
-		rnd_rk4[i] = Grng_rk4[i];
+		double rnd_temp;
+		rnd_temp =  RNG_withSeed(0,i_run);
+		rnd_rk4[i] = rnd_temp;
 	}
+//			write_csv("/mnt/result/rnd_sigma.csv",convert_double(rnd_sigma,1,NUM_VAR*NUM_PARTICLES,-1),NUM_PARTICLES,NUM_VAR);
+
 }

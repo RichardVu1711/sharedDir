@@ -63,7 +63,6 @@ ALL TIMES.
 #include "random_generator/normrnd.h"
 #include "random_generator/RNG_withSeed.h"
 #include "resample_pf/resample_pf.h"
-#include "mvnpdf/mvnpdf_code.h"
 #include "calweights/Calweights.h"
 #include "rk4/rk4.h"
 #include "global_define/GISmsmt_prcs.h"
@@ -264,22 +263,6 @@ int main(int argc, char* argv[]) {
 			cl::Event done_S;
 			cl::Event done_C;
 			cl::Event done_R;
-			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
-			{
-				double rnd_temp;
-				if((i_step == 0)&&(i==0))
-					rnd_temp =  RNG_withSeed(1,i_run);
-				else
-					rnd_temp =  RNG_withSeed(0,i_run);
-				rnd_sigma[i] = rnd_temp;
-			}
-
-			for(int i=0; i< NUM_VAR*4;i++){
-//							double rnd_temp = norm(urbg);
-					double rnd_temp;
-					rnd_temp = RNG_withSeed(0,i_run);
-					Grng_rk4[i] = rnd_temp;
-			}
 			int n_meas[N_SRC];
 			// conduct an initialisation
 			do{
@@ -356,7 +339,8 @@ int main(int argc, char* argv[]) {
 						kSigma,kCreate, k_mPxx,
 						&nstate[idx_s], &pbS,&nbS,
 						&Sinit, s_stt, c_stt,
-						idx_s,&done_S);
+						idx_s,&done_S,
+						i_step,i_run);
 					if(s_stt !=4){
 						// as we already update the next state in P4,
 						// hence no need to overwrite again
