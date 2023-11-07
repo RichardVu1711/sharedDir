@@ -20,7 +20,7 @@
 #include "../mvnpdf/mvnpdf_code.h"
 #include "../calweights/Calweights.h"
 #include "../rk4/rk4.h"
-#include "../GISmsmt_prcs.h"
+#include "../global_define/GISmsmt_prcs.h"
 
 #include <pthread.h>
 #include <stdlib.h>

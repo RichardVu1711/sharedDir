@@ -10,6 +10,7 @@
 
 // Include Files
 #include "norm_func.h"
+
 #include <cmath>
 
 // Function Definitions
@@ -19,8 +20,8 @@
 //
 void norm_func(fixed_type X[2],fixed_type* norm_error)
 {
-	double a = X[0]*X[0] + X[1]*X[1];
-	*norm_error = sqrt(a);
+	ap_fixed<WORD_LENGTH+INT_LEN,INT_LEN+INT_LEN> a = X[0]*X[0] + X[1]*X[1];
+	*norm_error = hls::sqrt(a);
 }
 // File trailer for norm_func.cpp
 //
