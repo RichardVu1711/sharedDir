@@ -129,7 +129,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 	Mat_S M_state;
 	M_state.col = 1;
 	M_state.row = NUM_VAR;
-	for(int i=0; i < 13;i++)
+	for(int i=0; i < NUM_VAR;i++)
 	{
 		M_state.entries[i*NUM_VAR] = state[i];
 	}
@@ -145,7 +145,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(sigMat,p_sigMatOut[0],size_large);
-	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
+//	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 
 	// Copy input for ESPCrtParticles
 	memcpy(p_stateIn[0],state_pro,size_state);
@@ -159,7 +159,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(prtcls,p_prtclsOut[0],size_large);
-	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
+//	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 	cout << "\nFinished Sampling\n";
 
 	// indicating the block is done.
@@ -178,6 +178,7 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 			int step, double* N_eff,
 			fixed_type wt[NUM_PARTICLES],
 			cl::Kernel k_mPxx, cl::Kernel kCal,
+			fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS],
 			int qIdx)
 {
 	cl_int err;
@@ -192,7 +193,9 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 
 	memcpy(p_pxxIn[0],p_pxxOut[0],size_pxx);
 
-	msmt msmtinfo = msmt_prcs(obs_data);
+//	msmt msmtinfo = msmt_prcs(obs_data);
+	// 2 is because matlab index at 1 and 1 fort the given measurement
+	msmt msmtinfo = msmt_prcs(obs_data,step+1,cAvg,nAvg);
 	Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
 	fixed_type R [N_MEAS];
 	for(int i=0; i < N_MEAS;i++)
@@ -240,13 +243,23 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 		double p_du = mvnpdf_code(zDiff_du, Mu,pzx_du,n_obs);
 
 		fixed_type p_fp = p_du;
-		wt[i] = wt[i]*p_fp;
+		if(p_fp!=0)	{
+			wt[i] = wt[i]*p_fp;	// if the outlier gets here => do not make any decision
+		}
+		if( i< 10)
+		cout << p_fp << ", ";
 		sum_fp = sum_fp + wt[i];
 	}
-
-	for(int i =0; i < NUM_PARTICLES;i++)
-	{
-		wt[i] = wt[i]/sum_fp;
+	if(sum_fp !=0){
+		for(int i =0; i < NUM_PARTICLES;i++){
+			wt[i] = wt[i]/sum_fp;
+		}
+//		cout << "weight = 0!!!!!!!";
+	}
+	else{	//sum_fp ==0 => outlier
+		for(int i =0; i < NUM_PARTICLES;i++){
+			wt[i] = 1.0/NUM_PARTICLES;
+		}
 	}
 
 	double re_sum =0;
@@ -258,10 +271,10 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 	N_eff[0] = 1/re_sum;
 
 	//Note: This is for testing purpose only, please remove it once the functionality is confirmed.
-	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
-	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,N_MEAS*NUM_PARTICLES,-1),NUM_PARTICLES,N_MEAS);
-	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,N_MEAS*N_MEAS*NUM_PARTICLES,-1),N_MEAS*NUM_PARTICLES,N_MEAS);
-	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
+//	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
+//	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,N_MEAS*NUM_PARTICLES,-1),NUM_PARTICLES,N_MEAS);
+//	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,N_MEAS*N_MEAS*NUM_PARTICLES,-1),N_MEAS*NUM_PARTICLES,N_MEAS);
+//	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
 
 	cout << "\nFinished Calculate Pzx Zdiff\n";
 //
@@ -280,18 +293,21 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type wt[NUM_PARTICLE
 			int** p_pxxOut, cl::Buffer& b_pxxOut,
 			int** p_stateIn, int** p_pxxIn,
 			int step,
-			cl::Kernel& kPFU, int qIdx)
+			cl::Kernel& kPFU, int qIdx, int i_run)
 {
 	cl_int err;
 	if(N_eff < NUM_PARTICLES*0.5 || N_eff > DBL_MAX*0.5)
 	{
 		double rnd_temp;
-		randn(&rnd_temp,0,0);
+		rnd_temp =  RNG_withSeed(0,i_run);
 		fixed_type rnd_rsmp = rnd_temp;
 		resamplePF_wrap(prtcls,wt,rnd_rsmp);
-		memcpy(p_prtclsIn[0],&prtcls,size_large);
+		memcpy(p_prtclsIn[0],&prtcls[0],size_large);
 		cout << "resample required\n";
 	}
+//	write_csv("/mnt/result/wt2.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
+//	write_csv("/mnt/result/prtcls2.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
+
 	memcpy(p_wtIn[0], wt,size_wt);
 
 	OCL_CHECK(err, err = q[qIdx].enqueueMigrateMemObjects({b_prtclsIn,b_wtIn},0/* 0 means from host*/));

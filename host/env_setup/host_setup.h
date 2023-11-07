@@ -12,7 +12,7 @@
 #include "../global_define/read_write_csv.h"
 #include "../global_define/mat_lib.h"
 #include "../random_generator/normrnd.h"
-#include "../random_generator/randn.h"
+//#include "../random_generator/randn.h"
 #include "../resample_pf/resample_pf.h"
 #include "../calweights/mvnpdf_code.h"
 #include "../calweights/Calweights.h"
@@ -79,6 +79,7 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 			int step, double* N_eff,
 			fixed_type wt[NUM_PARTICLES],
 			cl::Kernel k_mPxx, cl::Kernel kCal,
+			fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS],
 			int qIdx);
 
 int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type wt[NUM_PARTICLES], double N_eff,
@@ -88,7 +89,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES], fixed_type wt[NUM_PARTICLE
 			int** p_pxxOut, cl::Buffer& b_pxxOut,
 			int** p_stateIn, int** p_pxxIn,
 			int step,
-			cl::Kernel& kPFU, int qIdx);
+			cl::Kernel& kPFU, int qIdx, int i_run);
 #define OCL_CHECK(error, call)                                                                   \
     call;                                                                                        \
     if (error != CL_SUCCESS) {                                                                   \

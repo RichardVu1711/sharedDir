@@ -63,12 +63,14 @@ ALL TIMES.
 #include "global_define/read_write_csv.h"
 #include "global_define/mat_lib.h"
 #include "random_generator/normrnd.h"
-#include "random_generator/randn.h"
+//#include "random_generator/randn.h"
 #include "resample_pf/resample_pf.h"
 #include "calweights/mvnpdf_code.h"
 #include "calweights/Calweights.h"
 #include "rk4/rk4.h"
 #include "global_define/GISmsmt_prcs.h"
+#include "random_generator/RNG_withSeed.h"
+
 
 //static const std::string error_message =
 //    "Error: Result mismatch:\n"
@@ -79,6 +81,8 @@ cl::Context context;
 cl::Program program;
 std::vector<cl::Platform> platforms;
 cl::CommandQueue q[Q_LEN];
+
+#define N_OBS 52
 
 
 int main(int argc, char* argv[]) {
@@ -190,10 +194,10 @@ int main(int argc, char* argv[]) {
     cout << "Phase: Start ESP-PF\n";
 
     system(" rm -rf /mnt/result/*.csv");
-    rand_init(0);
-    for(int i_run = 0; i_run < 1;i_run++)
+//    rand_init(0);
+    for(int i_run = 0; i_run < 100;i_run++)
     {
-        int step =0;
+//        int step =0;
 
 	//  range.end();
 	//	events.mark("Initializes Variables and Data Test");
@@ -207,26 +211,30 @@ int main(int argc, char* argv[]) {
         fixed_type wt[1*NUM_PARTICLES];
         double N_eff =0;
         fixed_type obs_data[52*10];
-        convert_FP(read_csvMulLine("/mnt/test_data/Init/obsVals_missing1.csv",0, 52, 10),
-        		obs_data, 1, 52*10, -1);
+//		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVals2.csv",154, 154+N_OBS, 10),
+//									obs_data, 1, N_OBS*10, -1);
+		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVals2.csv",0, 0+N_OBS, 10),
+									obs_data, 1, N_OBS*10, -1);
         Mat_S obs;
         init_mat(&obs,1,10);
-		for(int i_step=0; i_step < 1;i_step++)
+        fixed_type cAvg[N_MEAS];
+        fixed_type nAvg[N_MEAS];
+		for(int step=0; step < N_OBS;step++)
 		{
 			for(int i=0; i < 10;i++)
 			{
-				obs.entries[i] = obs_data[i_step*10+i];
+				obs.entries[i] = obs_data[step*10+i];
 			}
-			if(i_step==0)
+			if(step==0)
 			{
 		        cout << "Phase: initialisation \n";
 		        // only read the first one
 //		        convert_FP(read_csvMulLine("/mnt/test_data/Init/prtcls_init.csv",0, NUM_VAR, NUM_PARTICLES),
 //											prtcls, NUM_VAR, NUM_PARTICLES, 1);
-		        convert_FP(read_csvMulLine("/mnt/test_data/Init/state_in.csv",0*NUM_VAR, NUM_VAR, 1),
-											state, 1, NUM_VAR, -1);
-		        convert_FP(read_csvMulLine("/mnt/test_data/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
-											pxx, NUM_VAR, NUM_VAR, 0);
+				convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/state_in.csv",0*NUM_VAR, NUM_VAR, 1),
+						state, 1, NUM_VAR, -1);
+				convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
+						pxx, NUM_VAR, NUM_VAR, 0);
 		        for(int i=0; i < NUM_PARTICLES;i++)
 		        {
 		        	wt[i] = 1.0/NUM_PARTICLES;
@@ -234,6 +242,9 @@ int main(int argc, char* argv[]) {
 		        memcpy(p_stateIn,state,size_state);
 		        memcpy(p_prtclsIn,prtcls,size_large);
 		        memcpy(p_pxxIn,pxx,size_pxx);
+		        for(int i=0; i < N_MEAS;i++){
+		        	cAvg[i] = obs.entries[i];
+		        }
 			}
 			else
 			{
@@ -241,20 +252,26 @@ int main(int argc, char* argv[]) {
 				memcpy(p_pxxIn,p_pxxOut,size_pxx);
 				memcpy(state,p_stateOut,size_state);
 				memcpy(pxx,p_pxxOut,size_pxx);
-
+				for(int i=0; i < N_MEAS;i++){
+					cAvg[i] = nAvg[i];
+				}
 
 			}
 			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
 			{
 				double rnd_temp;
-				randn(&rnd_temp,0,0);
+				if((step == 0)&&(i==0))
+					rnd_temp =  RNG_withSeed(1,i_run);
+				else
+					rnd_temp =  RNG_withSeed(0,i_run);
 				rnd_sigma[i] = rnd_temp;
 			}
+//			write_csv("/mnt/result/rnd_sigma.csv",convert_double(rnd_sigma,1,NUM_VAR*NUM_PARTICLES,-1),NUM_PARTICLES,NUM_VAR);
 
 			for(int i=0; i< NUM_VAR*4;i++)
 			{
 				double rnd_temp;
-				randn(&rnd_temp,0,0);
+				rnd_temp =  RNG_withSeed(0,i_run);
 				rnd_rk4[i] = rnd_temp;
 			}
 			block_S(&p_pxxIn,pxx, b_pxxIn,
@@ -273,9 +290,9 @@ int main(int argc, char* argv[]) {
 					&p_pxxIn, b_pxxIn,
 					&p_zDiff, b_zDiffOut,
 					&p_pzx,b_pzxOut,
-					i_step, &N_eff,
+					step, &N_eff,
 					wt,
-					k_mPxx,kCal,
+					k_mPxx,kCal,cAvg,nAvg,
 					0);
 
 			block_R(prtcls,wt, N_eff,
@@ -285,7 +302,7 @@ int main(int argc, char* argv[]) {
 					&p_pxxOut, b_pxxOut,
 					&p_stateIn, &p_pxxIn,
 					step,
-					kPFU,0);
+					kPFU,0,i_run);
 		}
     }
 
