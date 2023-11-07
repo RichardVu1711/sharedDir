@@ -215,17 +215,16 @@ int main(int argc, char* argv[]) {
 //									obs_data, 1, N_OBS*10, -1);
 		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVals2.csv",0, 0+N_OBS, 10),
 									obs_data, 1, N_OBS*10, -1);
-        Mat_S obs;
-        init_mat(&obs,1,10);
+		fixed_type obs[10];
         fixed_type cAvg[N_MEAS];
         fixed_type nAvg[N_MEAS];
-		for(int step=0; step < N_OBS;step++)
+		for(int i_step=0; i_step < N_OBS;i_step++)
 		{
 			for(int i=0; i < 10;i++)
 			{
-				obs.entries[i] = obs_data[step*10+i];
+				obs[i] = obs_data[i_step*10+i];
 			}
-			if(step==0)
+			if(i_step==0)
 			{
 		        cout << "Phase: initialisation \n";
 		        // only read the first one
@@ -243,7 +242,7 @@ int main(int argc, char* argv[]) {
 		        memcpy(p_prtclsIn,prtcls,size_large);
 		        memcpy(p_pxxIn,pxx,size_pxx);
 		        for(int i=0; i < N_MEAS;i++){
-		        	cAvg[i] = obs.entries[i];
+		        	cAvg[i] = obs[i];
 		        }
 			}
 			else
@@ -260,7 +259,7 @@ int main(int argc, char* argv[]) {
 			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
 			{
 				double rnd_temp;
-				if((step == 0)&&(i==0))
+				if((i_step == 0)&&(i==0))
 					rnd_temp =  RNG_withSeed(1,i_run);
 				else
 					rnd_temp =  RNG_withSeed(0,i_run);
@@ -284,13 +283,13 @@ int main(int argc, char* argv[]) {
 
 			block_C(&p_prtclsOut,&p_prtclsIn,b_prtclsIn,
 					&p_pxxOut,b_pxxOut,
-					&obs,
+					obs,
 					&p_msmtIn,b_msmtIn,
 					&p_RmatIn, b_RmatIn,
 					&p_pxxIn, b_pxxIn,
 					&p_zDiff, b_zDiffOut,
 					&p_pzx,b_pzxOut,
-					step, &N_eff,
+					i_step, &N_eff,
 					wt,
 					k_mPxx,kCal,cAvg,nAvg,
 					0);
@@ -301,7 +300,7 @@ int main(int argc, char* argv[]) {
 					&p_stateOut, b_stateOut,
 					&p_pxxOut, b_pxxOut,
 					&p_stateIn, &p_pxxIn,
-					step,
+					i_step,
 					kPFU,0,i_run);
 		}
     }

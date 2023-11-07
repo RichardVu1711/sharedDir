@@ -17,5 +17,5 @@ typedef struct msmt{
 
 
 fixed_type deg2Rad(fixed_type deg);
-msmt msmt_prcs(Mat_S* obsVals, int index, fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS]);
-void outlier_detector(Mat_S* obsVals,fixed_type cAvg[N_MEAS], int index, fixed_type nAvg[N_MEAS], fixed_type fil_data[N_MEAS]);
+msmt msmt_prcs(fixed_type obsVals[10], int index, fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS]);
+void outlier_detector(fixed_type obsVals[10],fixed_type cAvg[N_MEAS], int index, fixed_type nAvg[N_MEAS], fixed_type fil_data[N_MEAS]);

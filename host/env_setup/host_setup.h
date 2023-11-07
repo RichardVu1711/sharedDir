@@ -70,7 +70,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 			int** p_pxxOut, cl::Buffer &b_pxxOut,
-			Mat_S* obs_data,
+			fixed_type obs_data[10],
 			int** p_msmtIn, cl::Buffer &b_msmtIn,
 			int** p_RmatIn, cl::Buffer &b_RmatIn,
 			int** p_pxxIn, cl::Buffer &b_pxxIn,

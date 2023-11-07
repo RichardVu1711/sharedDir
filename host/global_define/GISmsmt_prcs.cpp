@@ -1,7 +1,7 @@
 #include "GISmsmt_prcs.h"
 
 
-void outlier_detector(Mat_S* obsVals,fixed_type cAvg[N_MEAS], int index, fixed_type nAvg[N_MEAS], fixed_type fil_data[N_MEAS]){
+void outlier_detector(fixed_type obsVals[10],fixed_type cAvg[N_MEAS], int index, fixed_type nAvg[N_MEAS], fixed_type fil_data[N_MEAS]){
 
 	fixed_type idx = (double) index;
 	fixed_type aoastd = (double)AOASTD;
@@ -9,7 +9,7 @@ void outlier_detector(Mat_S* obsVals,fixed_type cAvg[N_MEAS], int index, fixed_t
 
 	// Calculate the z-scores = (X - nAvg)/std_meas
 	for(int i=0; i < N_MEAS;i++){
-		fixed_type X = obsVals->entries[i];
+		fixed_type X = obsVals[i];
 		//calculate the new moving avg based on the incoming data
 //		cout << X/idx << "% ";
 //		cout << X << "~ ";
@@ -34,8 +34,6 @@ void outlier_detector(Mat_S* obsVals,fixed_type cAvg[N_MEAS], int index, fixed_t
 		else
 			fil_data[i] =  X;
 	}
-
-
 }
 
 
@@ -44,7 +42,7 @@ void outlier_detector(Mat_S* obsVals,fixed_type cAvg[N_MEAS], int index, fixed_t
 // 3 is maximum values for n_row or n_col
 // aoaIdx contains what node is triggered SN1 =01, SN2= 02, SN3 =03
 // tdoaIdx contains what node is triggered 12 = 01, 13= 02, 23 = 03
-msmt msmt_prcs(Mat_S* obsVals, int index, fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS])
+msmt msmt_prcs(fixed_type obsVals[10], int index, fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS])
 {
 	// obsVals dimension is 1x10
 	//msmt.z dimension is 6x1
