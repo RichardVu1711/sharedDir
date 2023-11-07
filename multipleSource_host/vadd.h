@@ -51,7 +51,7 @@ ALL TIMES.
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY 1
 
 #include <CL/cl2.hpp>
-#include "calweights/another_GISPzx.h"
+#include "calweights/Calweights.h"
 #include "env_setup/host_setup.h"
 
 

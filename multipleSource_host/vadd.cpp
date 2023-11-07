@@ -61,12 +61,12 @@ ALL TIMES.
 #include "global_define/read_write_csv.h"
 #include "global_define/mat_lib.h"
 #include "random_generator/normrnd.h"
-#include "random_generator/randn.h"
+#include "random_generator/RNG_withSeed.h"
 #include "resample_pf/resample_pf.h"
 #include "mvnpdf/mvnpdf_code.h"
 #include "calweights/Calweights.h"
 #include "rk4/rk4.h"
-#include "GISmsmt_prcs.h"
+#include "global_define/GISmsmt_prcs.h"
 
 std::vector<cl::Device> devices ;
 cl::Device device;
@@ -187,7 +187,6 @@ int main(int argc, char* argv[]) {
 
     system(" rm -rf /mnt/result/*.csv");
     cl::Event status_S,status_S1;
-    rand_init(0);
 //    auto value = norm(urbg);
 
     // prepare for three stages
@@ -205,6 +204,8 @@ int main(int argc, char* argv[]) {
     	fixed_type Gpxx[N_SRC][NUM_VAR*NUM_VAR];
     	fixed_type Gwt[N_SRC][NUM_PARTICLES];
     	fixed_type Gobs[N_SRC][10];
+    	fixed_type G_cAvg[N_SRC][N_MEAS];
+    	fixed_type G_nAvg[N_SRC][N_MEAS];
 
         fixed_type prtcls[NUM_VAR*NUM_PARTICLES];
         fixed_type state[NUM_VAR];
@@ -263,17 +264,20 @@ int main(int argc, char* argv[]) {
 			cl::Event done_S;
 			cl::Event done_C;
 			cl::Event done_R;
-			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++){
-//							double rnd_temp = norm(urbg);
-					double rnd_temp;
-					randn(&rnd_temp,0,0);
-					Grng_sigma[i] = rnd_temp;
+			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
+			{
+				double rnd_temp;
+				if((i_step == 0)&&(i==0))
+					rnd_temp =  RNG_withSeed(1,i_run);
+				else
+					rnd_temp =  RNG_withSeed(0,i_run);
+				rnd_sigma[i] = rnd_temp;
 			}
 
 			for(int i=0; i< NUM_VAR*4;i++){
 //							double rnd_temp = norm(urbg);
 					double rnd_temp;
-					randn(&rnd_temp,0,0);
+					rnd_temp = RNG_withSeed(0,i_run);
 					Grng_rk4[i] = rnd_temp;
 			}
 			int n_meas[N_SRC];
@@ -299,6 +303,10 @@ int main(int argc, char* argv[]) {
 							for(int i=0; i < NUM_PARTICLES;i++){
 								Gwt[idx_s][i] = 1.0/NUM_PARTICLES;
 							}
+							for(int i=0; i < N_MEAS;i++){
+								// initialise the current average to obs
+								G_cAvg[idx_s][i] = Gobs[idx_s][i];
+							}
 						}
 					}
 					else{
@@ -317,7 +325,6 @@ int main(int argc, char* argv[]) {
 //								}
 								if(pstate[idx_s-1]==CAL){
 									cout << "idx = "<< idx_s<< ", state = "<< pstate[idx_s-1] <<"\n";
-
 									nstate[idx_s] = SAMP;
 									pstate[idx_s] = SAMP;
 								}
@@ -377,7 +384,8 @@ int main(int argc, char* argv[]) {
 									i_step,kCal,
 									&nstate[idx_s], &pbC, &nbC,
 									&Cinit,c_stt,r_stt,&s_stt,
-									idx_s,&done_C);
+									idx_s,&done_C,
+									G_cAvg[idx_s],G_nAvg[idx_s]);
 					if(c_stt != 2){
 						// as we already update the next state in P2,
 						// hence no need to overwrite again
@@ -404,7 +412,7 @@ int main(int argc, char* argv[]) {
 						kPFU,
 						&nstate[idx_s], &pstate[idx_s],&pbR,&nbR,
 						&Rinit,r_stt, &c_stt,
-						idx_s, &done_R);
+						idx_s, &done_R,i_run);
 				if(r_stt != 2){
 					// as we already update the next state in P2,
 					// hence no need to overwrite again

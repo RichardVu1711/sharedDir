@@ -383,9 +383,9 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			int step, cl::Kernel& kCal,
 			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
 			int* Cinit, int C_status, int r_stt, int* s_stt,
-			int idx_s, cl::Event* done_C)
+			int idx_s, cl::Event* done_C,
+			fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS])
 {
-
 	cl_int err;
 	msmt msmtinfo;
 	Mat_S Rmat;
@@ -397,8 +397,8 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 	switch(pbC[0])
 	{
 	case INIT:{
-		msmtinfo = msmt_prcs(obs_data);
-		Rmat = R_cal(&msmtinfo);
+		msmt msmtinfo = msmt_prcs(obs_data,step+1,cAvg,nAvg);
+		Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
 
 		for(int i=0; i < N_MEAS;i++)
 		{
@@ -520,7 +520,8 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 			cl::Kernel& kPFU,
 			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
 			int* Rinit, int R_status, int* c_stt,
-			int idx_s, cl::Event* done_R)
+			int idx_s, cl::Event* done_R,
+			int i_run)
 {
 	fixed_type pzx[N_MEAS*N_MEAS*NUM_PARTICLES];
 	fixed_type zDiff[1*N_MEAS*NUM_PARTICLES];
@@ -567,7 +568,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 
 		if(N_eff < NUM_PARTICLES*0.5 || N_eff > DBL_MAX*0.5){
 			double rnd_temp;
-			randn(&rnd_temp,0,0);
+			rnd_temp = RNG_withSeed(0,i_run);
 			fixed_type rnd_rsmp = rnd_temp;
 			resamplePF_wrap(prtcls,wt,rnd_rsmp);
 			memcpy(p_prtclsIn[0],prtcls,size_large);

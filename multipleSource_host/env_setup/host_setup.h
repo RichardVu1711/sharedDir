@@ -15,9 +15,8 @@
 #include "../global_define/read_write_csv.h"
 #include "../global_define/mat_lib.h"
 #include "../random_generator/normrnd.h"
-#include "../random_generator/randn.h"
+#include "../random_generator/RNG_withSeed.h"
 #include "../resample_pf/resample_pf.h"
-#include "../mvnpdf/mvnpdf_code.h"
 #include "../calweights/Calweights.h"
 #include "../rk4/rk4.h"
 #include "../global_define/GISmsmt_prcs.h"
@@ -115,11 +114,11 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			fixed_type obs_data[10],
 			int** p_zDiffOut, cl::Buffer &b_zDiffOut,
 			int** p_pzxOut, cl::Buffer &b_pzxOut,
-			int step,
-			cl::Kernel& kCal,
+			int step, cl::Kernel& kCal,
 			state_t* nstate, samp_state_t* pbC, samp_state_t* nbC,
 			int* Cinit, int C_status, int r_stt, int* s_stt,
-			int idx_s, cl::Event* done_C);
+			int idx_s, cl::Event* done_C,
+			fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS]);
 
 int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES],
 			int n_meas,
@@ -134,7 +133,8 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 			cl::Kernel& kPFU,
 			state_t* nstate, state_t* pstate,samp_state_t* pbR, samp_state_t* nbR,
 			int* Rinit, int R_status, int* c_stt,
-			int idx_s, cl::Event* done_R);
+			int idx_s, cl::Event* done_R,
+			int i_run);
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
 		fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES]);
