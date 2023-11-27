@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
 
     system(" rm -rf /mnt/result/*.csv");
 //    rand_init(0);
-    for(int i_run = 0; i_run < 100;i_run++)
+    for(int i_run = 0; i_run < 1;i_run++)
     {
 //        int step =0;
 

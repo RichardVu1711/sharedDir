@@ -3,3 +3,4 @@ vivado.log
 vivado_pid341938.str
 vitis_pid20164.str
 xrc.log
+*.str

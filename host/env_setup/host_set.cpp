@@ -115,6 +115,8 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	memcpy(pM_pxxIn[0],pxx,size_pxx);
 	memcpy(p_rndIn[0],rnd,size_large);
+	write_csv("/mnt/result/rnd.csv",convert_double(rnd,1,NUM_VAR*NUM_PARTICLES,-1),NUM_VAR,NUM_PARTICLES);
+
 	cl_int err;
 
 	// execute sigmaComp Block
@@ -145,7 +147,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(sigMat,p_sigMatOut[0],size_large);
-//	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
+	write_csv("/mnt/result/sigMat.csv",convert_double(sigMat,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 
 	// Copy input for ESPCrtParticles
 	memcpy(p_stateIn[0],state_pro,size_state);
@@ -159,7 +161,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 
 	// NOTE: recording data is for debugging purpose, need to turn it to improve the overall performance !!
 	memcpy(prtcls,p_prtclsOut[0],size_large);
-//	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
+	write_csv("/mnt/result/prtcls.csv",convert_double(prtcls,1,NUM_VAR*NUM_PARTICLES,0),NUM_VAR,NUM_PARTICLES);
 	cout << "\nFinished Sampling\n";
 
 	// indicating the block is done.
@@ -196,6 +198,8 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 //	msmt msmtinfo = msmt_prcs(obs_data);
 	// 2 is because matlab index at 1 and 1 fort the given measurement
 	msmt msmtinfo = msmt_prcs(obs_data,step+1,cAvg,nAvg);
+	write_csv("/mnt/result/msmtInfo.csv",convert_double(msmtinfo.z,N_MEAS,1,0),1,N_MEAS);
+
 	Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
 	fixed_type R [N_MEAS];
 	for(int i=0; i < N_MEAS;i++)
@@ -271,10 +275,10 @@ int block_C(int** p_prtclsOut,int** p_prtclsIn, cl::Buffer &b_prtclsIn,
 	N_eff[0] = 1/re_sum;
 
 	//Note: This is for testing purpose only, please remove it once the functionality is confirmed.
-//	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
-//	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,N_MEAS*NUM_PARTICLES,-1),NUM_PARTICLES,N_MEAS);
-//	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,N_MEAS*N_MEAS*NUM_PARTICLES,-1),N_MEAS*NUM_PARTICLES,N_MEAS);
-//	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
+	write_csv("/mnt/result/mPxx.csv",convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
+	write_csv("/mnt/result/zDiff.csv",convert_double(zDiff,1,N_MEAS*NUM_PARTICLES,-1),NUM_PARTICLES,N_MEAS);
+	write_csv("/mnt/result/pzx.csv",convert_double(pzx,1,N_MEAS*N_MEAS*NUM_PARTICLES,-1),N_MEAS*NUM_PARTICLES,N_MEAS);
+	write_csv("/mnt/result/wt.csv",convert_double(wt,1,1*NUM_PARTICLES,-1),1,NUM_PARTICLES);
 
 	cout << "\nFinished Calculate Pzx Zdiff\n";
 //
