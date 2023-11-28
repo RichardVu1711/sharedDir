@@ -37,13 +37,12 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS][NUM_VAR], fixed_type pxx_local[NUM_VAR
 				}
 			}			// run NUM_VAR/N_MM iterations
 			mm_cr:for(int k=0; k < NUM_VAR;k = k + N_MM){
-
 //				// extract pxx columns
 				cp_pxx:	for(int inst = 0; inst < N_MM * NUM_VAR; inst++) {
 				    #pragma HLS UNROLL
-				    int k_inst = (inst % NUM_VAR);
-				    int j_inst = inst / NUM_VAR;
-				    t_pxx1[j_inst][k_inst] = pxx_local[j_inst][k_inst];
+				    int runIdx = (inst % NUM_VAR);
+				    int staIdx = inst / NUM_VAR;
+				    t_pxx1[staIdx][runIdx] = pxx_local[runIdx][staIdx+k];
 				}
 				// Conduct vector multiplication (1x13 vec * 13x1 vec = 1 scalar);
 				vm_rc:for(int inst =0; inst < N_MM;inst++){
@@ -65,7 +64,7 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS][NUM_VAR], fixed_type pxx_local[NUM_VAR
 				// extract pxx columns
 				for(int j =0; j < NUM_VAR;j++){
 #pragma HLS PIPELINE
-					t_pxx1[0][j] = pxx_local[j][k];
+					t_pxx1[0][j] = pxx_local[k][j];
 
 				}
 				// Conduct vector multiplication (1x13 vec * 13x1 vec = 1 scalar);
@@ -90,14 +89,14 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS][NUM_VAR], fixed_type pxx_local[NUM_VAR
 #pragma HLS ARRAY_PARTITION dim=2 type=complete variable=t_pxx2
 
 	// calculate Re*Hxx'
-	// (Hxx*Pxx)*Hxx
+	// (Hxx*Pxx)*Hxx'
 	se_mm:for(int i=-0; i < N_MEAS;i++){
 		if(i < n_obs){
 			// extract the row,
 			smm_cr:for(int k=0; k < N_MEAS;k=k+1){
 #pragma HLS PIPELINE
 				if(k < n_obs){
-					// extract the row of Hxx,
+					// extract the row of Hxx or column of Hxx',
 					// a row of Hxx is a column of Hxx'(transposed)
 					pzx_cal_label2:for(int j=0; j< NUM_VAR;j++){
 #pragma HLS UNROLL
@@ -123,6 +122,7 @@ void GISPzx3(fixed_type Hxx_local[N_MEAS][NUM_VAR], fixed_type pxx_local[NUM_VAR
 			}
 		}
 	}
+
 	// add std
 	for(int i=0; i < N_MEAS;i++){
 		temp_re2[i][i] = temp_re2[i][i] + R_mat->entries[i*NUM_VAR+i];

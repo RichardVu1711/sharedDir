@@ -6,7 +6,7 @@ void store_data_crt(fixed_type X_meanpro[NUM_VAR],
 {
 	for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
-#pragma HLS UNROLL
+#pragma HLS UNROLL factor=13
 		sigMat_out->entries[i] = sigMat[i];
 	}
 
@@ -47,6 +47,10 @@ void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
 	store_data_crt(X_meanpro,sigMat,&X_meanpro_local,&sigMat_local);
     // Jacobian is a constant regardless of time and mean state
     // Therefore, expm(Jacobian) will also be a constant number !!
+
+	//UPDATE 16/10
+	// TODO: Implement Exponential Matrix
+	// This may be dumbed into PS
     Mat_S J;
     init_mat(&J,NUM_VAR,NUM_VAR);
     for (int i=0; i < NUM_VAR;i++)

@@ -29,7 +29,7 @@ void sigmaComp(fixed_type Pxx[NUM_VAR*NUM_VAR],
 	}
 	for(int i=0; i < NUM_PARTICLES*NUM_VAR;i++)
 	{
-#pragma HLS UNROLL
+#pragma HLS UNROLL factor=13
 		rnd_local[i] = rnd_data[i];
 	}
 
@@ -59,7 +59,7 @@ void store_sigma(fixed_type sigMat_local[NUM_VAR*NUM_PARTICLES],
 {
 	for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
-#pragma HLS UNROLL
+#pragma HLS UNROLL factor=13
 		sigMat[i] = sigMat_local[i];
 	}
 }

@@ -1,5 +1,5 @@
 #include "mean_pxx.h"
-#define LOOP_FACTOR 1
+#define LOOP_FACTOR 32
 
 void load_mean_data(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 					Mat* prtcls_local)

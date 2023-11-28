@@ -1,7 +1,7 @@
 #include "Calweights.h"
 //#include "lib/read_write_csv.h"
 
-#define LOOP_FACTOR 32
+#define LOOP_FACTOR 1
 
 // this function is used to copy a particle's vector into two vector.
 // Those two generated vectors are used to calculate the estimated meas.
