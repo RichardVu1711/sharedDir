@@ -37,14 +37,17 @@ int main()
 	fixed_type wt[1*NUM_PARTICLES];
 	fixed_type obs_data[N_OBS*10];
 	fixed_type Pxx_[NUM_VAR*NUM_VAR];
-
-	convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsVals_missing1/obsVals_missing1.csv",0, N_OBS, 10),
+//
+//	convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsVals_missing1/obsVals_missing1.csv",0, N_OBS, 10),
+//			obs_data, 1, N_OBS*10, -1);
+	convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsVal2/Init/obsVals2.csv",0, N_OBS, 10),
 			obs_data, 1, N_OBS*10, -1);
-    Mat_S obs;
     std::vector<double> eff_;
-    init_mat(&obs,1,10);
+//    init_mat(&obs,1,10);
+    fixed_type cAvg[N_MEAS];
+	fixed_type nAvg[N_MEAS];
 //    system(" del C:/ESP_PF_PLNewWeight/AXI_ESP_PF/result/*.csv");
-    int status = system("del /Q C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/*.csv");
+    int status = system("del /Q C:/ESP_PF_PLNewWeight/ESP_Outlier/result/*.csv");
 
 	if (status == 0) {
 		printf("CSV files in /result deleted successfully.\n");
@@ -54,45 +57,59 @@ int main()
 	for(int i_run = 0; i_run < 1;i_run++)
 	{
 	    // random synchronise with MATLAB to conduct unit test
-		for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
-		{
-			double rnd_temp;
-//			randn(&rnd_temp,0,0);
-			if(i ==0)
-				rnd_temp = RNG_withSeed(1,0);
-			else
-				rnd_temp = RNG_withSeed(0,0);
-			rnd_sigma[i] = rnd_temp;
-		}
+//		for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
+//		{
+//			double rnd_temp;
+//			if((i ==0)&&(i_run==0))
+//				rnd_temp = RNG_withSeed(1,i_run);
+//			else
+//				rnd_temp = RNG_withSeed(0,0);
+//			rnd_sigma[i] = rnd_temp;
+//		}
 		int cnt = 0;
-		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/rnd_sigma.csv",
-					convert_double(rnd_sigma,1,13*1024,0),13,1024);
-		for(int i_step=0; i_step < N_OBS-2;i_step++)
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/rnd_sigma.csv",
+//					convert_double(rnd_sigma,1,13*1024,0),13,1024);
+		for(int i_step=0; i_step < N_OBS-51;i_step++)
 		{
+		    fixed_type obs[10];
 			for(int i=0; i < 10;i++){
-				obs.entries[i] = obs_data[i_step*10+i+10];
+				obs[i] = obs_data[i_step*10+i];
 			}
 			if(i_step==0){
 				cout << "Phase: initialisation \n";
 				// only read the first one
-				convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsFull_1/Init/state_init1.csv",0*NUM_VAR, NUM_VAR, 1),
+				convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsVal2/Init/state_in.csv",0*NUM_VAR, NUM_VAR, 1),
 											state, 1, NUM_VAR, -1);
-				convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsFull_1/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
+				convert_FP(read_csvMulLine("C:/ESP_PF_PLNewWeight/test_data/obsVal2/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
 											pxx, NUM_VAR, NUM_VAR, 0);
 				for(int i=0; i < NUM_PARTICLES;i++){
 					wt[i] = 1.0/NUM_PARTICLES;
+				}
+				for(int i=0; i < N_MEAS;i++){
+					cAvg[i] = obs[i];
+				}
+			}
+			else{
+				for(int i=0; i < N_MEAS;i++){
+					cAvg[i] = nAvg[i];
 				}
 			}
 
 
 			for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++)
 			{
+//				double rnd_temp;
+////				randn(&rnd_temp,0,0);
+//				rnd_temp = RNG_withSeed(0,0);
+//				rnd_sigma[i] = rnd_temp;
 				double rnd_temp;
-//				randn(&rnd_temp,0,0);
-				rnd_temp = RNG_withSeed(0,0);
+				if((i_step ==0)&&(i==0))
+					rnd_temp = RNG_withSeed(1,i_run);
+				else
+					rnd_temp = RNG_withSeed(0,0);
 				rnd_sigma[i] = rnd_temp;
 			}
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/rnd_sigma.csv",
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/rnd_sigma.csv",
 					convert_double(rnd_sigma,1,13*1024,0),13,1024);
 
 
@@ -101,7 +118,6 @@ int main()
 				double rnd_temp;
 //				randn(&rnd_temp,0,0);
 				rnd_temp = RNG_withSeed(0,0);
-
 				rnd_rk4[i] = rnd_temp;
 			}
 
@@ -110,12 +126,16 @@ int main()
 			Mat_S M_state;
 			M_state.col = 1;
 			M_state.row = NUM_VAR;
-			for(int i=0; i < 13;i++)
+			for(int i=0; i < NUM_VAR;i++)
 			{
 				M_state.entries[i*NUM_VAR] = state[i];
 			}
+			for(int i=0; i < 13;i++){
+				cout << state[i] << "\t";
+			}
 
 			rk4(&M_state,&stateOut_pro,rnd_rk4);
+
 			// sigmaComp ----------------------------//
 			sigmaComp(pxx, sigMat,rnd_sigma);
 
@@ -127,18 +147,27 @@ int main()
 
 			// ESPCrtParticles ---------------------//
 			ESPCrtParticles(state_pro,sigMat,prtcls);
-
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/sigMat.csv",convert_double(sigMat,1,13*1024,0),13,1024);
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/prtcls.csv",convert_double(prtcls,1,13*1024,0),13,1024);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/state_pro.csv",convert_double(state_pro,1,13,0),1,13);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/sigMat.csv",convert_double(sigMat,1,13*1024,0),13,1024);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/prtcls.csv",convert_double(prtcls,1,13*1024,0),13,1024);
 
 			// mean_Pxx --------------------------//
 			mean_Pxx(prtcls,Pxx_);
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/mPxx.csv",convert_double(Pxx_,1,13*13,-1),13,13);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/mPxx.csv",convert_double(Pxx_,1,13*13,-1),13,13);
 
 			// Rmat and msmt_prcs
-			msmt msmtinfo = msmt_prcs(&obs);
+			msmt msmtinfo = msmt_prcs(obs,i_step+1,cAvg,nAvg);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/msmtInfo.csv",convert_double(msmtinfo.z,1,N_MEAS,0),1,N_MEAS);
+
 			Mat_S Rmat = R_cal(msmtinfo.n_aoa,msmtinfo.n_tdoa);
-			showmat_S(&msmtinfo.z);
+
+//			showmat_S(&msmtinfo.z);
+			cout << "Meas:\n";
+			for(int i=0; i < N_MEAS;i++)
+			{
+				cout << obs_data[i_step*10 + i] <<", ";
+			}
+			cout << "\n";
 			fixed_type R [N_MEAS];
 			for(int i=0; i < N_MEAS;i++)
 			{
@@ -172,23 +201,23 @@ int main()
 				fixed_type p_fp = (isnan(p_du)?0:p_du);
 				wt[i] = wt[i]*p_fp;
 				sum_fp = sum_fp + wt[i];
-				if(i < 3){
-					cout << "\n p_du = " << p_du << "\n";
-					cout << " zDiff = ";
-					for(int i_temp =0; i_temp < 6;i_temp++){
-						cout << zDiff_du[i_temp] << ", ";
-					}
-					cout << "\n";
-					cout << " pzx = ";
-					for(int i_temp =0; i_temp < 6;i_temp++){
-						cout << pzx_du[i_temp][i_temp] << ", ";
-					}
-					cout << "\n";
-				}
+//				if(i < 3){
+//					cout << "\n p_du = " << p_du << "\n";
+//					cout << " zDiff = ";
+//					for(int i_temp =0; i_temp < 6;i_temp++){
+//						cout << zDiff_du[i_temp] << ", ";
+//					}
+//					cout << "\n";
+//					cout << " pzx = ";
+//					for(int i_temp =0; i_temp < 6;i_temp++){
+//						cout << pzx_du[i_temp][i_temp] << ", ";
+//					}
+//					cout << "\n";
+//				}
 
 			}
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/zDiff_cpp.csv",convert_double(zDiff,1,6*1024,-1),1024,6);
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/pzx_cpp.csv",convert_double(pzx,1,36*1024,-1),6*1024,6);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/zDiff_cpp.csv",convert_double(zDiff,1,6*1024,-1),1024,6);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/pzx_cpp.csv",convert_double(pzx,1,36*1024,-1),6*1024,6);
 
 			for(int i =0; i < NUM_PARTICLES;i++)
 			{
@@ -197,7 +226,6 @@ int main()
 					return -3;
 				}
 				wt[i] = wt[i]/sum_fp;
-
 			}
 
 			double re_sum =0;
@@ -208,7 +236,7 @@ int main()
 			}
 			N_eff = 1/re_sum;
 
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/wt_cpp.csv",convert_double(wt,1,1*1024,-1),1,1024);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/wt_cpp.csv",convert_double(wt,1,1*1024,-1),1,1024);
 
 			if(N_eff < NUM_PARTICLES*0.5 || N_eff > DBL_MAX*0.5)
 			{
@@ -225,8 +253,8 @@ int main()
 //						fixed_type state[NUM_VAR],
 //						fixed_type pxx[NUM_VAR*NUM_VAR])
 			PFupdate(prtcls,wt,state,pxx);
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/state_sol.csv",convert_double(state,1,13,-1),1,13);
-			write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/pxx_sol.csv",convert_double(pxx,1,13*13,-1),13,13);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/state_sol.csv",convert_double(state,1,13,-1),1,13);
+			write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/pxx_sol.csv",convert_double(pxx,1,13*13,-1),13,13);
 
 			cout << "\nstate= " << state[0] << ", " << state[1] << "\t pxx =" << pxx[0] << ", " << pxx[14] << "\n";
 			cout << "End of : " << i_step << " with Neff =  "<< N_eff <<".\n";
@@ -240,7 +268,7 @@ int main()
 //		{
 //			out_du.at(i) =  eff_[i];
 //		}
-//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/eff_.csv",eff_,1,cnt);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/eff_.csv",eff_,1,cnt);
 
 	}
 

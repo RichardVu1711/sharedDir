@@ -9,7 +9,7 @@
 //
 
 // Include Files
-#include "../calW/norm_func.h"
+#include "norm_func.h"
 
 #include <cmath>
 

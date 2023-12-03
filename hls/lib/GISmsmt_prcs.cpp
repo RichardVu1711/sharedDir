@@ -1,20 +1,58 @@
 #include "GISmsmt_prcs.h"
 
 
-// msmt information
+void outlier_detector(fixed_type obsVals[10],fixed_type cAvg[N_MEAS], int index, fixed_type nAvg[N_MEAS], fixed_type fil_data[N_MEAS]){
 
+	fixed_type idx = (double) index;
+	fixed_type aoastd = (double)AOASTD;
+	fixed_type tdoastd = (double)TDOASTD;
+
+	// Calculate the z-scores = (X - nAvg)/std_meas
+	for(int i=0; i < N_MEAS;i++){
+		fixed_type X = obsVals[i];
+//		cout << X << ", ";
+		//calculate the new moving avg based on the incoming data
+//		cout << X/idx << "% ";
+//		cout << X << "~ ";
+//		cout << cAvg[i] << "? ";
+		nAvg[i] = (cAvg[i]*(idx-1)/idx) + X/idx;
+//		cout << nAvg[i] << "! ";
+
+		//calculate the (X - nAvg)
+		fixed_type diff = X - nAvg[i];
+		fixed_type  z_scores =0;
+		//calculate z-scores:
+		if(i < N_AOA){// use aoastd
+			z_scores = diff/aoastd;
+		}
+		else{	//use tdoastd
+			z_scores = diff/tdoastd;
+		}
+
+		// check if the threshold is exceeded.
+		if(z_scores > OL_THOLD)
+			fil_data[i] = 1023;
+		else
+			fil_data[i] =  X;
+	}
+}
+
+
+// msmt information
 // 1023 means invalid
 // 3 is maximum values for n_row or n_col
 // aoaIdx contains what node is triggered SN1 =01, SN2= 02, SN3 =03
 // tdoaIdx contains what node is triggered 12 = 01, 13= 02, 23 = 03
-
-msmt msmt_prcs(Mat_S* obsVals)
+msmt msmt_prcs(fixed_type obsVals[10], int index, fixed_type cAvg[N_MEAS], fixed_type nAvg[N_MEAS])
 {
 	// obsVals dimension is 1x10
 	//msmt.z dimension is 6x1
 	msmt msmtinfo;
-	init_mat(&(msmtinfo.z),SN_NUM*2,1);
-
+	for(int i=0; i < 6;i++)
+	{
+		msmtinfo.z[i] = 0;
+	}
+	fixed_type fil_data[N_MEAS]= {0,0,0,0,0,0};
 	msmtinfo.n_aoa= 0;
 	msmtinfo.n_tdoa= 0;
 	// initialise valid flag
@@ -23,24 +61,25 @@ msmt msmt_prcs(Mat_S* obsVals)
 		msmtinfo.validIdx[i] = 0;
 	}
 	int k = 0;
+	outlier_detector(obsVals, cAvg, index, nAvg, fil_data);
+
+
 	AOA_cal:for(int i =0; i < SN_NUM;i++)
 	{
-		fixed_type AOA = get_ele_S(obsVals,0,i);
+		fixed_type AOA = fil_data[i];
 //		fixed_type AOA = obsVals->entries[i];
 //		fixed_type TDOA = obsVals.entries[i+3];
-		if(AOA !=1023)
-		{
+		if(AOA !=1023){
 			if(AOA> 180) AOA = -(360 - AOA);
 			AOA = deg2Rad(AOA);
 			// set AOA values to entries
-			set_ele_S(&(msmtinfo.z),k++,0,AOA);
+			msmtinfo.z[k++] = AOA;
 			msmtinfo.n_aoa++;
 			msmtinfo.aoaIdx[i] = i+1;
 			// flag this data is valid
 			msmtinfo.validIdx[i] = 1;
 		}
-		else
-		{
+		else{
 			// receive invalid values
 			// flag this data is invalid
 			msmtinfo.validIdx[i] = 1;
@@ -50,11 +89,11 @@ msmt msmt_prcs(Mat_S* obsVals)
 //		fixed_type TDOA =get_ele_S(obsVals,0,i+3);
 	for(int i =0; i < SN_NUM;i++)
 	{
-		fixed_type TDOA = get_ele_S(obsVals,0,i+3);
+		fixed_type TDOA = fil_data[i+3];
 		if(TDOA !=1023)
 		{
 			// set TDOA values to entries
-			set_ele_S(&(msmtinfo.z),k++,0,TDOA);
+			msmtinfo.z[k++] = TDOA;
 			msmtinfo.n_tdoa++;
 			msmtinfo.tdoaIdx[i] = i+1;
 			// continuous for checking tdoa
@@ -69,6 +108,10 @@ msmt msmt_prcs(Mat_S* obsVals)
 	cout << "Valid Data Idx: \n";
 	for(int i=0; i < N_MEAS;i++){
 		cout << msmtinfo.validIdx[i] << ", ";
+	}
+	cout << "\n Valid Data: \n";
+	for(int i=0; i < N_MEAS;i++){
+		cout << msmtinfo.z[i] << ", ";
 	}
 
 	return msmtinfo;

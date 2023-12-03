@@ -1,5 +1,5 @@
 #include "Calweights.h"
-//#include "lib/read_write_csv.h"
+#include "lib/read_write_csv.h"
 
 #define LOOP_FACTOR 1
 
@@ -47,6 +47,12 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 				fixed_type zDiff[NUM_PARTICLES*N_MEAS],
 				fixed_type pzx[NUM_PARTICLES*N_MEAS*N_MEAS])
 {
+#pragma HLS STREAM variable=prtcls
+#pragma HLS STREAM variable=msmtinfo
+#pragma HLS STREAM variable=R_mat
+#pragma HLS STREAM variable=Pxx_
+#pragma HLS STREAM variable=zDiff
+#pragma HLS STREAM variable=pzx
 
 #pragma HLS INTERFACE mode=m_axi bundle=gmem3 port=pzx offset=slave
 #pragma HLS INTERFACE mode=m_axi bundle=gmem2 port=zDiff offset=slave
@@ -72,13 +78,12 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 
 	fixed_type zDiff_local[NUM_PARTICLES*N_MEAS];
 	fixed_type pzx_local[NUM_PARTICLES*N_MEAS*N_MEAS];
-	fixed_type pxx_local1[NUM_VAR*NUM_VAR];
-	fixed_type pxx_local2[NUM_VAR*NUM_VAR];
+	fixed_type pxx_local1[NUM_VAR][NUM_VAR];
 	Mat prtcls_local;
 	Mat_S R_local;
 	msmt msmtinfo1,msmtinfo2,msmtinfo3;
 
-	load_data(Pxx_,prtcls,R_mat,msmtinfo,pxx_local1,pxx_local2,&prtcls_local,&R_local,&msmtinfo1,&msmtinfo2,&msmtinfo3);
+	load_data(Pxx_,prtcls,R_mat,msmtinfo,pxx_local1,&prtcls_local,&R_local,&msmtinfo1,&msmtinfo2,&msmtinfo3);
 	int nobs1 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
 	int nobs2 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
 
@@ -88,10 +93,10 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 		// reuse resources
 		// tempX2 is Hxx, tempX3 is z_cap
 #pragma HLS DATAFLOW
-		Mat_S temp_X;
-		Mat_S temp_X2;
-		Mat_S temp_X3;
-		Mat_S temp_X4;
+		Mat_S temp_X;	// particle column
+		fixed_type obsJacobian[N_MEAS][NUM_VAR];
+		fixed_type GISobs[N_MEAS];
+		Mat_S temp_X4;	// particles column
 
 		int idx1 = index;
 		int idx2 = index;
@@ -107,16 +112,14 @@ void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 		duplicate_data(&prtcls_local,j1,&temp_X,&temp_X4);
 
 //		Calculate the estimated measurement based on the given particles
-		ObsJacobian(&temp_X,idx1,&msmtinfo1,&temp_X2);
-		GISobs_model(&temp_X4,idx2,&msmtinfo2,&temp_X3);
-//		showmat_S(&temp_X2);
-//		showmat_S(&temp_X3);
+		ObsJacobian(&temp_X,idx1,&msmtinfo1,obsJacobian);
+		GISobs_model(&temp_X4,idx2,&msmtinfo2,GISobs);
 
-//		pzx_cal(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
-		GISPzx3(temp_X2.entries,pxx_local1,&R_local,pzx_local,nobs1,j3);
-		zDiff_cal(&temp_X3,&msmtinfo3,zDiff_local,nobs2,j4);
-		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/ObsJacobian_COV.csv",convert_double(temp_X2.entries,1,13*6,0),6,13);
-		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/GISobs_model_COV.csv",convert_double(temp_X3.entries,6,1,0),1,6);
+
+		GISPzx3(obsJacobian,pxx_local1,&R_local,pzx_local,nobs1,j3);
+		zDiff_cal(GISobs,&msmtinfo3,zDiff_local,nobs2,j4);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/ObsJacobian_COV.csv",convert_double(obsJacobian,1,13*6,0),6,13);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_Outlier/result/GISobs_model_COV.csv",convert_double(GISobs,6,1,0),1,6);
 
 	}
 	store_data(zDiff_local, pzx_local, zDiff,pzx);
@@ -128,38 +131,61 @@ void load_data(fixed_type pxx[NUM_VAR*NUM_VAR],
 				fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
 				fixed_type R [N_MEAS],
 				msmt* msmtinfo,
-				fixed_type pxx_Out1[NUM_VAR*NUM_VAR],
-				fixed_type pxx_Out2[NUM_VAR*NUM_VAR],
+				fixed_type pxx_Out1[NUM_VAR][NUM_VAR],
 				Mat* prtcls_temp,
 				Mat_S* R_out,
 				msmt* msmtinfo1,
 				msmt* msmtinfo2,
 				msmt* msmtinfo3)
 {
-	size_t pxx_size = NUM_VAR*NUM_VAR*sizeof(fixed_type);
-	size_t mat_size = 1*sizeof(Mat);
-	size_t matS_size = 1*sizeof(Mat_S);
-	size_t msmt_size = 1*sizeof(msmt);
+
 #pragma HLS PIPELINE off
-	memcpy(pxx_Out1,pxx,pxx_size);
-	memcpy(R_out,R,matS_size);
+
+	pxx_cp:for(int i=0; i < NUM_VAR*NUM_VAR;i++){
+//#pragma HLS UNROLL
+		int idx= i/13;
+		int jdx= i%13;
+		pxx_Out1[idx][jdx] = pxx[i];
+	}
+
 	R_cp:for(int i=0; i < N_MEAS;i++)
 	{
+//#pragma HLS UNROLL
 		R_out->entries[i*NUM_VAR+i] = R[i];
 	}
-	memcpy(msmtinfo1,msmtinfo,msmt_size);
-//	memcpy(prtcls_temp->entries,prtcls->entries,mat_size);
+
 	prtcls_cp:for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
-#pragma HLS PIPELINE
+//#pragma HLS PIPELINE
+//#pragma HLS UNROLL
 		prtcls_temp->entries[i]=prtcls[i];
 	}
 	prtcls_temp->col = NUM_PARTICLES;
 	prtcls_temp->row = NUM_VAR;
-	memcpy(msmtinfo2,msmtinfo1,msmt_size);
-	memcpy(msmtinfo3,msmtinfo2,msmt_size);
-	memcpy(pxx_Out2,pxx_Out1,pxx_size);
 
+
+	// cpy msmtinfo
+	msmt:for(int i=0; i < N_MEAS;i++){
+//#pragma HLS UNROLL
+
+		msmtinfo1->validIdx[i] = msmtinfo->validIdx[i];
+		msmtinfo1->z[i] = msmtinfo->z[i];
+	}
+	msmtinfo1->n_aoa = msmtinfo->n_aoa;
+	msmtinfo1->n_tdoa = msmtinfo->n_tdoa;
+
+	msmt2:for(int i=0; i < N_MEAS;i++){
+//#pragma HLS UNROLL
+
+		msmtinfo2->z[i] = msmtinfo1->z[i];
+		msmtinfo3->z[i] = msmtinfo1->z[i];
+		msmtinfo2->validIdx[i] = msmtinfo1->validIdx[i];
+		msmtinfo3->validIdx[i] = msmtinfo1->validIdx[i];
+	}
+	msmtinfo2->n_aoa = msmtinfo1->n_aoa;
+	msmtinfo2->n_tdoa = msmtinfo1->n_tdoa;
+	msmtinfo3->n_aoa = msmtinfo1->n_aoa;
+	msmtinfo3->n_tdoa = msmtinfo1->n_tdoa;
 }
 void store_data( fixed_type zDiff_local[NUM_PARTICLES*SN_NUM*2],
 					fixed_type pzx_local[NUM_PARTICLES*SN_NUM*2*SN_NUM*2],

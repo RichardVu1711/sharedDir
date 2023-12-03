@@ -151,9 +151,9 @@ void PFupdate(fixed_type particle[NUM_VAR*NUM_PARTICLES],
 			{
 #pragma HLS PIPELINE II=2
 #pragma HLS UNROLL factor=4
-				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp = sum_0;
+				ap_fixed<WORD_LENGTH+2,INT_LEN+2,AP_RND_CONV,AP_SAT > temp = sum_0;
 				// shift the weight to the left 8 bits
-				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp_wt = wt_local[i1+i2];
+				ap_fixed<WORD_LENGTH+2,INT_LEN+2,AP_RND_CONV,AP_SAT > temp_wt = wt_local[i1+i2];
 				temp_wt = temp_wt << 8;
 
 				ap_fixed<WORD_LENGTH+10,INT_LEN+10,AP_RND_CONV,AP_SAT > temp1 = particles_local.entries[i0+i1+i2]*temp_wt;
