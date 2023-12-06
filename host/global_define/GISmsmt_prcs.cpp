@@ -65,7 +65,7 @@ msmt msmt_prcs(fixed_type obsVals[10], int index, fixed_type cAvg[N_MEAS], fixed
 //		fixed_type AOA = obsVals->entries[i];
 //		fixed_type TDOA = obsVals.entries[i+3];
 		if(AOA !=1023){
-			if(AOA> 180) AOA = -(360 - AOA);
+//			if(AOA> 180) AOA = -(360 - AOA);
 			AOA = deg2Rad(AOA);
 			// set AOA values to entries
 			msmtinfo.z[k++] = AOA;

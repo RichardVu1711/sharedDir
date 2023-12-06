@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
         fixed_type obs_data[52*10];
 //		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVals2.csv",154, 154+N_OBS, 10),
 //									obs_data, 1, N_OBS*10, -1);
-		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVals2.csv",0, 0+N_OBS, 10),
+		convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVal2.csv",0, 0+N_OBS, 10),
 									obs_data, 1, N_OBS*10, -1);
 		fixed_type obs[10];
         fixed_type cAvg[N_MEAS];
@@ -222,6 +222,7 @@ int main(int argc, char* argv[]) {
 		{
 			for(int i=0; i < 10;i++)
 			{
+//				obs[i] = obs_data[i_step*10+i];
 				obs[i] = obs_data[i_step*10+i];
 			}
 			if(i_step==0)
@@ -232,6 +233,9 @@ int main(int argc, char* argv[]) {
 //											prtcls, NUM_VAR, NUM_PARTICLES, 1);
 				convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/state_in.csv",0*NUM_VAR, NUM_VAR, 1),
 						state, 1, NUM_VAR, -1);
+				state[0] = state[0] +(fixed_type) 0.1;
+				state[1] = state[1] +(fixed_type) 0.1;
+
 				convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
 						pxx, NUM_VAR, NUM_VAR, 0);
 		        for(int i=0; i < NUM_PARTICLES;i++)
@@ -262,7 +266,7 @@ int main(int argc, char* argv[]) {
 				if((i_step == 0)&&(i==0))
 					rnd_temp =  RNG_withSeed(1,i_run);
 				else
-					rnd_temp =  RNG_withSeed(0,i_run);
+				rnd_temp =  RNG_withSeed(0,i_run);
 				rnd_sigma[i] = rnd_temp;
 			}
 //			write_csv("/mnt/result/rnd_sigma.csv",convert_double(rnd_sigma,1,NUM_VAR*NUM_PARTICLES,-1),NUM_PARTICLES,NUM_VAR);
