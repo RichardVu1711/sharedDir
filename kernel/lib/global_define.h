@@ -6,7 +6,7 @@
 #define	NUM_VAR	13
 #define FS_C 0.1024683122
 //#define AOASTD_SQRT 0.000149262535695487	// 0.7 degree
-#define AOASTD_SQRT 0.00030462	//2 degree
+#define AOASTD_SQRT 0.00030462	//1 degree
 #define TDOASTD_SQRT 49.0
 
 #define PXX_AP_LEN (NUM_VAR*(NUM_VAR+1)/2)

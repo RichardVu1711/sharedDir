@@ -40,6 +40,9 @@ void GISobs_model(Mat_S* prtcl_X, int step, msmt* msmtinfo, fixed_type zCap[N_ME
 			ap_fixed<WORD_LENGTH,INT_LEN> b = diffX[i];
 	//		cout << a <<", " << b << "\n";
 			fixed_type temp = hls::atan2(b,a);
+
+			if(temp < 0) temp = temp +(fixed_type) 6.283185; //2pi
+
 			temp += get_ele_S(prtcl_X,10+i,0);
 			set_ele_S(&z_temp,i,0,temp);
 		}
