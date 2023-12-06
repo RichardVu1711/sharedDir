@@ -67,6 +67,8 @@ ALL TIMES.
 #include "rk4/rk4.h"
 #include "global_define/GISmsmt_prcs.h"
 
+
+
 std::vector<cl::Device> devices ;
 cl::Device device;
 cl::Context context;
@@ -139,8 +141,6 @@ int main(int argc, char* argv[]) {
     OCL_CHECK(err, err = kSigma.setArg(1,b_sigMatOut));
     OCL_CHECK(err, err = kSigma.setArg(2,b_rndIn));
 
-
-
     OCL_CHECK(err, err = k_mPxx.setArg(0,b_prtclsIn));
     OCL_CHECK(err, err = k_mPxx.setArg(1,b_pxxOut));
 
@@ -186,19 +186,11 @@ int main(int argc, char* argv[]) {
 
     system(" rm -rf /mnt/result/*.csv");
     cl::Event status_S,status_S1;
-//    auto value = norm(urbg);
 
     // prepare for three stages
 
-    for(int i_run = 0; i_run < 1;i_run++)
+    for(int i_run = 0; i_run < 100;i_run++)
     {
-
-//        auto const seed = i_run;
-//		auto urbg = std::mt19937 {seed};
-//		double const mu = 0.0;
-//		double const sigma = 1.0;
-//		auto norm = std::normal_distribution<double>{mu,sigma};
-
     	fixed_type Gstate[N_SRC][NUM_VAR];
     	fixed_type Gpxx[N_SRC][NUM_VAR*NUM_VAR];
     	fixed_type Gwt[N_SRC][NUM_PARTICLES];
@@ -207,28 +199,25 @@ int main(int argc, char* argv[]) {
     	fixed_type G_nAvg[N_SRC][N_MEAS];
 
         fixed_type prtcls[NUM_VAR*NUM_PARTICLES];
-        fixed_type state[NUM_VAR];
-        fixed_type pxx[NUM_VAR*NUM_VAR];
-        fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES];
-        fixed_type rnd_rk4[NUM_VAR*4];
-        fixed_type sigMat[NUM_VAR*NUM_PARTICLES];
 
         fixed_type wt[1*NUM_PARTICLES];
         double N_eff =0;
-        fixed_type obs_data[52*10];
-        convert_FP(read_csvMulLine("/mnt/test_data/Init/obsVals.csv",0, 52, 10),
-        		obs_data, 1, 52*10, -1);
+        fixed_type obs_data[N_SRC][N_OBS*10];
+
+        convert_FP(read_csvMulLine("/mnt/test_data/obsVal1/Init/obsVal1.csv",0, N_OBS, 10),
+        		obs_data[0], 1, N_OBS*10, -1);
+        convert_FP(read_csvMulLine("/mnt/test_data/obsVal2/Init/obsVal2.csv",0, N_OBS, 10),
+        		obs_data[1], 1, N_OBS*10, -1);
 //        events.mark("begin");
 
         // there are states for controlling the FSM of state
 	    state_t pstate[N_SRC]; // keep tracking of state at computing state (can't be update at IDLE/SLEEP state)
 	    state_t cstate[N_SRC]; // current state will be updated with nstate at the end of FSM.
 	    state_t nstate[N_SRC]; // next state will be modified at the end of blocks
-
-		for(int i_step=0; i_step <52;i_step++)
+//	    xrt::profile::user_range profiler[N_SRC];
+		for(int i_step=0; i_step <N_OBS ;i_step++)
 		{
-//	        std::string s = std::to_string(i_step);
-//	        const char *pchar = s.c_str();
+
 			int s_stt = 0;
 			int c_stt = 0;
 			int r_stt = 0;
@@ -238,7 +227,7 @@ int main(int argc, char* argv[]) {
 
 			int idone[N_SRC];
 			fixed_type prtclsTmp[NUM_PARTICLES*NUM_VAR];
-			for(int i=0; i < 1;i++)
+			for(int i=0; i < N_SRC;i++)
 			{
 				// idone is used to check if the initialisation is conducted or not.
 				idone[i] = 0;
@@ -256,9 +245,6 @@ int main(int argc, char* argv[]) {
 		    	nstate[i] = INIT;
 
 		    }
-//		    int S_status;
-//		    int C_status;
-//		    int R_status;
 			int timer =0;
 			cl::Event done_S;
 			cl::Event done_C;
@@ -266,22 +252,26 @@ int main(int argc, char* argv[]) {
 			int n_meas[N_SRC];
 			// conduct an initialisation
 			do{
-				for(int idx_s = 0; idx_s < 3;idx_s++){
+				for(int idx_s = 0; idx_s < N_SRC;idx_s++){
+//				for(int idx_s = N_SRC-1; idx_s >=0;idx_s--){
 				switch(cstate[idx_s]){
 				case INIT:{
 					pstate[idx_s] = cstate[idx_s];
-					cout << "\nsrc " << idx_s << " is at INIT " <<".\n";
+//					cout << "\nsrc " << idx_s << " is at INIT " <<".\n";
 					if(idone[idx_s] ==0){
 						idone[idx_s] =1;
 						for(int i=0; i < 10;i++){
-							Gobs[idx_s][i] = obs_data[i_step*10+i];
+							Gobs[idx_s][i] = obs_data[idx_s][i_step*10+i];
 						}
 						if(i_step==0){
 							cout << "Phase: initialisation 2\n";
 							// only read the first one
-							convert_FP(read_csvMulLine("/mnt/test_data/Init/state_init.csv",0*NUM_VAR, NUM_VAR, 1),
+							string  state_dir = "/mnt/test_data/obsVal"+to_string(idx_s+1) +"/Init/state_in.csv";
+							string  pxx_dir = "/mnt/test_data/obsVal"+to_string(idx_s+1) +"/Init/Pxx_in.csv";
+
+							convert_FP(read_csvMulLine(state_dir,0*NUM_VAR, NUM_VAR, 1),
 														&Gstate[idx_s][0], 1, NUM_VAR, -1);
-							convert_FP(read_csvMulLine("/mnt/test_data/Init/Pxx_in.csv",0*NUM_VAR, NUM_VAR, NUM_VAR),
+							convert_FP(read_csvMulLine(pxx_dir,0*NUM_VAR, NUM_VAR, NUM_VAR),
 														&Gpxx[idx_s][0], NUM_VAR, NUM_VAR, 0);
 							for(int i=0; i < NUM_PARTICLES;i++){
 								Gwt[idx_s][i] = 1.0/NUM_PARTICLES;
@@ -296,18 +286,11 @@ int main(int argc, char* argv[]) {
 						// check if the next block is ready to be occupied.
 						if(s_stt == 0){
 							if(idx_s ==0){
-								cout << "\n\n\n idx_s = " << idx_s<<"\n\n\n";
 								nstate[idx_s] = SAMP;
 							}
 							else{
-								// idx_s != 0;
-								// first source is using it.
-//								if(c_stt == 0) nstate[idx_s] = IDLE;
-//								else{
-//									nstate[idx_s] = SAMP;
-//								}
 								if(pstate[idx_s-1]==CAL){
-									cout << "idx = "<< idx_s<< ", state = "<< pstate[idx_s-1] <<"\n";
+									// the next block - SAMP is available as the previous source is in CAL
 									nstate[idx_s] = SAMP;
 									pstate[idx_s] = SAMP;
 								}
@@ -326,6 +309,10 @@ int main(int argc, char* argv[]) {
 					// only update the state in these block indicating the current track.
 					pstate[idx_s] = cstate[idx_s];
 					int tmp = s_stt;
+//					std::string state_dir = "/mnt/result/stateIn" + to_string(idx_s) + ".csv";
+//					std::string pxx_dir = "/mnt/result/pxxIn" + to_string(idx_s) + ".csv";
+//					write_csv(state_dir,convert_double(&Gstate[idx_s][0],1,13,-1),1,13);
+//					write_csv(pxx_dir,convert_double(&Gpxx[idx_s][0],13,13,-1),13,13);
 					// there should be no writing into Global Memory in this phase !!!
 					// all global memory should be read-only at this stage.
 					s_stt = block_S(&p_pxxIn,&Gpxx[idx_s][0], b_pxxIn,
@@ -350,9 +337,6 @@ int main(int argc, char* argv[]) {
 //							memcpy(prtclsTmp,p_prtclsOut,size_large);
 						}
 					}
-					if((((timer%1) ==0)||(tmp != s_stt))&&(idx_s!=0)){
-//						print_state(idx_s,pstate[idx_s],s_stt);
-					}
 				}
 
 				break;
@@ -375,10 +359,6 @@ int main(int argc, char* argv[]) {
 						// hence no need to overwrite again
 						if(pbC==SWAIT) nstate[idx_s] = IDLE;
 						else nstate[idx_s] = CAL;
-					}
-					if((timer%1) ==0){
-//						print_state(idx_s,pstate[idx_s],c_stt);
-
 					}
 				}
 				break;
@@ -508,7 +488,7 @@ int main(int argc, char* argv[]) {
 								// idx_s != 0;
 								// first source is using it.
 								if(pstate[idx_s-1]==CAL){
-									cout << "idx = "<< idx_s<< ", state = "<< pstate[idx_s-1] <<"\n";
+//									cout << "idx = "<< idx_s<< ", state = "<< pstate[idx_s-1] <<"\n";
 									nstate[idx_s] = SAMP;
 									pstate[idx_s] = SAMP;
 								}
@@ -529,11 +509,11 @@ int main(int argc, char* argv[]) {
 				else
 				{
 
-					if(timer%1000==0){
-	//					cout << "\n";
-
-					print_state(idx_s,pstate[idx_s],timer);
-					}
+//					if(timer%1000==0){
+//	//					cout << "\n";
+//
+//					print_state(idx_s,pstate[idx_s],timer);
+//					}
 //					return -1;
 				}
 				}
@@ -541,17 +521,18 @@ int main(int argc, char* argv[]) {
 					// Update state
 				}
 				cstate[idx_s] = nstate[idx_s];
-
-//				if(cstate[idx_s]!=pstate[idx_s]){
-////					cout << "\n";
-////					print_state(idx_s,cstate[idx_s],timer);
-//				}
 				}
 				timer++;
 			}
 //			while(evaluate_step(src_state));
-			while(pstate[2]!= IDLE);
+			while(pstate[N_SRC-1]!= IDLE);
+			if(timer > 10000){
+				system("clear");
+				timer = 0;
+			}
 		}
+	    cout << "\nEND OF RUN: " << i_run << "\n";
+
     }
 //    events.mark("end");
     for(int i=0; i < N_SRC;i++)
@@ -562,9 +543,11 @@ int main(int argc, char* argv[]) {
 
     OCL_CHECK(err, err = q[0].finish());
     OCL_CHECK(err, err = q[1].finish());
-    clReleaseCommandQueue(q[0]());
-    clReleaseCommandQueue(q[1]());
-    clReleaseCommandQueue(q[2]());
+    for(int i=0; i < N_SRC;i++){
+        clReleaseCommandQueue(q[i]());
+
+    }
+//    clReleaseCommandQueue(q[2]());
 
     clReleaseContext(context.get());
     clReleaseDevice(device.get());
@@ -573,6 +556,8 @@ int main(int argc, char* argv[]) {
 //    free(Device_IDs);
 //
 //    clReleaseKernel(Kernel);
+
+
 
     int match =0;
 

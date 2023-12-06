@@ -214,11 +214,11 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 		tracking =0;
 		//copy data required for this block
 		memcpy(&pM_pxxIn[0][0],pxx,size_pxx);
-		string  pxx_dir = "/mnt/result/pxx"+to_string(idx_s) +".csv";
-		string  state_dir = "/mnt/result/state"+to_string(idx_s) +".csv";
-
-		write_csv(pxx_dir,convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
-		write_csv(state_dir,convert_double(state,1,NUM_VAR*1,-1),1,NUM_VAR);
+//		string  pxx_dir = "/mnt/result/pxx"+to_string(idx_s) +".csv";
+//		string  state_dir = "/mnt/result/state"+to_string(idx_s) +".csv";
+//
+//		write_csv(pxx_dir,convert_double(pxx,1,NUM_VAR*NUM_VAR,-1),NUM_VAR,NUM_VAR);
+//		write_csv(state_dir,convert_double(state,1,NUM_VAR*1,-1),1,NUM_VAR);
 
 		nbS[0] = P1;
 		Sinit[0] = 1;
@@ -229,7 +229,7 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 		tracking =1;
 		fixed_type rnd[NUM_VAR*NUM_PARTICLES];
 		fixed_type rnd_rk4[4*NUM_VAR];
-		rng(rnd_rk4,rnd,i_step,i_run);
+		rng(rnd_rk4,rnd,i_step,i_run,idx_s);
 		memcpy(&p_rndIn[0][0],rnd,size_large);
 
 		OCL_CHECK(err, err = q[idx_s].enqueueMigrateMemObjects({bM_pxxIn,b_rndIn},0/* 0 means from host*/));
@@ -312,15 +312,15 @@ int block_S(int** pM_pxxIn, fixed_type pxx[NUM_VAR*NUM_VAR],cl::Buffer &bM_pxxIn
 			memcpy(prtcls,&p_prtclsOut[0][0],size_large);
 			memcpy(prtclsTmp,&p_prtclsOut[0][0],size_large);
 			memcpy(mPxx,&p_pxxOut[0][0],size_pxx);
-			string  sigMat_dir = "/mnt/result/sigMat"+to_string(idx_s) +".csv";
-			string  prtcls_dir = "/mnt/result/prtcls"+to_string(idx_s) +".csv";
-			string  state_pro_dir = "/mnt/result/state_pro"+to_string(idx_s) +".csv";
-			string  mPxx_dir = "/mnt/result/mPxx"+to_string(idx_s) +".csv";
-
-			write_csv(sigMat_dir,convert_double(sigMat,1,13*1024,-1),13,1024);
-			write_csv(state_pro_dir,convert_double(state_pro,1,13*1,-1),1,13);
-			write_csv(prtcls_dir,convert_double(prtcls,1,13*1024,-1),13,1024);
-			write_csv(mPxx_dir,convert_double(mPxx,1,13*13,-1),13,13);
+//			string  sigMat_dir = "/mnt/result/sigMat"+to_string(idx_s) +".csv";
+//			string  prtcls_dir = "/mnt/result/prtcls"+to_string(idx_s) +".csv";
+//			string  state_pro_dir = "/mnt/result/state_pro"+to_string(idx_s) +".csv";
+//			string  mPxx_dir = "/mnt/result/mPxx"+to_string(idx_s) +".csv";
+//
+//			write_csv(sigMat_dir,convert_double(sigMat,1,13*1024,-1),13,1024);
+//			write_csv(state_pro_dir,convert_double(state_pro,1,13*1,-1),1,13);
+//			write_csv(prtcls_dir,convert_double(prtcls,1,13*1024,-1),13,1024);
+//			write_csv(mPxx_dir,convert_double(mPxx,1,13*13,-1),13,13);
 
 		}
 		else{nstate[0] = SAMP;}
@@ -454,10 +454,10 @@ int block_C(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],
 			memcpy(zDiff,p_zDiffOut[0],size_zDiff);
 			memcpy(pzx,p_pzxOut[0],size_pzx);
 			string  zDiff_dir = "/mnt/result/zDiff"+to_string(idx_s) +".csv";
-			string  pzx_dir = "/mnt/result/pzx"+to_string(idx_s) +".csv";
-
+//			string  pzx_dir = "/mnt/result/pzx"+to_string(idx_s) +".csv";
+//
 			write_csv(zDiff_dir,convert_double(zDiff,1,6*1024,-1),1024,6);
-			write_csv(pzx_dir,convert_double(pzx,1,36*1024,-1),6*1024,6);
+//			write_csv(pzx_dir,convert_double(pzx,1,36*1024,-1),6*1024,6);
 		}
 		else{
 			nstate[0] = CAL;
@@ -553,8 +553,19 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 			sum_fp = sum_fp + wt[i];
 		}
 
+		if(sum_fp !=0){
 		for(int i =0; i < NUM_PARTICLES;i++){
 			wt[i] = wt[i]/sum_fp;
+		}
+		}
+		else{	//sum_fp ==0 => outlier
+			//		cout << "weight = 0!!!!!!!";
+			while(1){
+				cout << "weight =1!!!!!!!";
+			}
+			for(int i =0; i < NUM_PARTICLES;i++){
+				wt[i] = 1.0/NUM_PARTICLES;
+			}
 		}
 
 		double re_sum =0;
@@ -574,9 +585,6 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 		}
 		memcpy(p_wtIn[0], wt,size_wt);
 		memcpy(p_prtclsIn[0], prtcls, size_large);
-		std::string wt_dir = "/mnt/result/wtOut" + to_string(idx_s) + ".csv";
-		write_csv(wt_dir,convert_double(wt,1,1024,-1),1,1024);
-		write_csv("/mnt/result/prtclsUOut.csv",convert_double(prtcls,1,13*1024,-1),13,1024);
 
 		// free block C
 		tracking =0;
@@ -600,7 +608,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 		break;
 	case P2:{
 		tracking =2;
-		cout << "\n\ntracking = 2\n";
+//		cout << "\n\ntracking = 2\n";
 		// after moving to new block.
 		// C tracking is still != 0;
 		// This ensures that block would be operated if it is not ready yet.
@@ -616,7 +624,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 		write_csv(state_dir,convert_double(state,1,13,-1),1,13);
 		write_csv(pxx_dir,convert_double(pxx,13,13,-1),13,13);
 		cout << "\nstate= " << state[0] << ", " << state[1] << "\t pxx =" << pxx[0] << ", " << pxx[14] << "\n";
-		cout << "End of : " << step << " with Neff =  "<< N_eff <<".\n";
+//		cout << "End of : " << step << " with Neff =  "<< N_eff <<".\n";
 		nbR[0] = SWAIT;	// wait for KSigma Finished.
 		tracking =0;
 	}
@@ -659,12 +667,13 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
 		 fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES],
-		 int i_step, int i_run)
+		 int i_step, int i_run, int s_idx)
 {
 	for(int i=0; i< NUM_VAR*NUM_PARTICLES;i++){
 		double rnd_temp;
+//		if((i_step == 0)&&(i==0)&&(s_idx==0))
 		if((i_step == 0)&&(i==0))
-			rnd_temp =  RNG_withSeed(1,i_run);
+			rnd_temp =  RNG_withSeed(1,i_run+49);
 		else
 			rnd_temp =  RNG_withSeed(0,i_run);
 		rnd_sigma[i] = rnd_temp;

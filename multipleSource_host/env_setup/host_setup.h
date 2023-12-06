@@ -4,7 +4,8 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY 1
-#define Q_LEN 3
+#define Q_LEN 2
+#define N_SRC Q_LEN
 
 #include <CL/cl2.hpp>
 
@@ -33,8 +34,7 @@ static const std::string error_message =
 
 #define WBUF 1
 #define RBUF 0
-
-#define N_SRC 3
+#define N_OBS 52
 
 extern std::vector<cl::Device> devices;
 extern cl::Device device;
@@ -63,6 +63,7 @@ extern xrt::profile::user_event events;
 extern int done;
 extern pthread_t t;
 extern double N_eff;
+
 
 //extern fixed_type Grng_rk4[NUM_VAR*4];
 //extern fixed_type Grng_sigma[NUM_VAR*NUM_PARTICLES];
@@ -141,7 +142,7 @@ int block_R(fixed_type prtcls[NUM_VAR*NUM_PARTICLES],fixed_type wt[NUM_PARTICLES
 
 void rng(fixed_type rnd_rk4[NUM_VAR],
 		 fixed_type rnd_sigma[NUM_VAR*NUM_PARTICLES],
-		 int i_step, int i_run);
+		 int i_step, int i_run, int s_idx);
 
 void* wait_thread(cl::CommandQueue* q);
 void wait_for_enter() ;
