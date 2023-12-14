@@ -5,7 +5,7 @@ void store_sigma(fixed_type sigMat_local[NUM_VAR*NUM_PARTICLES],
 				fixed_type sigMat[NUM_VAR*NUM_PARTICLES]);
 extern "C"
 {
-void sigmaComp(fixed_type Pxx[NUM_VAR*NUM_VAR],
+void sigmaComp(fixed_type Pxx[NUM_VAR],
 				fixed_type sigMat[NUM_VAR*NUM_PARTICLES],
 				fixed_type rnd_data[NUM_PARTICLES*NUM_VAR]);
 }

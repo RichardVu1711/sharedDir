@@ -2,7 +2,7 @@
 
 extern "C"
 {
-void sigmaComp(fixed_type Pxx[NUM_VAR*NUM_VAR],
+void sigmaComp(fixed_type Pxx[NUM_VAR],
 				fixed_type sigMat[NUM_VAR*NUM_PARTICLES],
 				fixed_type rnd_data[NUM_PARTICLES*NUM_VAR])
 {
@@ -18,11 +18,11 @@ void sigmaComp(fixed_type Pxx[NUM_VAR*NUM_VAR],
 #pragma HLS PIPELINE off
 	// this function computes the sigma values for the extrapolation
 //	newmat(sigMat,NUM_VAR,NUM_PARTICLES); // fixed 13xNUM_PARTICLES
-	fixed_type Pxx_local[NUM_VAR*NUM_VAR];
+	fixed_type Pxx_local[NUM_VAR];
 	fixed_type rnd_local[NUM_PARTICLES*NUM_VAR];
 	fixed_type sigMat_local[NUM_VAR*NUM_PARTICLES];
 
-	for(int i=0; i < NUM_VAR*NUM_VAR;i++)
+	for(int i=0; i < NUM_VAR;i++)
 	{
 #pragma HLS UNROLL
 		Pxx_local[i] = Pxx[i];
@@ -34,18 +34,17 @@ void sigmaComp(fixed_type Pxx[NUM_VAR*NUM_VAR],
 	}
 
 
-	int k=0;
 	for (int i = 0; i < NUM_VAR; i++)
 	{
-		ap_fixed<WORD_LENGTH,INT_LEN> temp = Pxx_local[i*NUM_VAR+i];
-		fixed_type sqrtRe = hls::sqrt(temp);
+//		ap_fixed<WORD_LENGTH,INT_LEN> temp = Pxx_local[i*NUM_VAR+i];
 		sigmaComp_label0:for(int j=0; j < NUM_PARTICLES;j++)
 		{
+			int k=i*NUM_PARTICLES+j;
+
 #pragma HLS PIPELINE II=1
 			// Matlab formula normrnd = random*sigma + mu
 			// random is taken from rnd_data, sigma is taken =  sqrt(pxx(i,i)), and mu =0
-			fixed_type r = rnd_local[k++] * sqrtRe + 0;
-			sigMat_local[i*NUM_PARTICLES+j] = r;
+			sigMat_local[k] = rnd_local[k] * Pxx_local[i] + 0;
 		}
 	}
 	store_sigma(sigMat_local,sigMat);
