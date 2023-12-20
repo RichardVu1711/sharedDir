@@ -1,0 +1,5 @@
+#alias for my laptop virtualbox
+alias mycd='cdpath() { cd "/home/rick/Desktop/git/BenchMarking/$1/$2/src"; if [ "$3" -ne 0 ]; then cd ..; cd kernels; fi; }; cdpath'
+
+#alias for my desktop
+alias cdhw='cd /home/mylord/esp_pf/${1}/${2}_full_system/Hardware/package/sd_card'
