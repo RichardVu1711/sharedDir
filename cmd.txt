@@ -3,3 +3,17 @@ alias mycd='cdpath() { cd "/home/rick/Desktop/git/BenchMarking/$1/$2/src"; if [ 
 
 #alias for my desktop
 alias cdhw='cd /home/mylord/esp_pf/${1}/${2}_full_system/Hardware/package/sd_card'
+
+#alias for copy essential files to tftp server
+alias cp_bf='cp_bf_func(){
+	if  [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+		echo "cp_bf work_space_directory project_name"
+		return 1
+    	fi
+	rm -rf ${BF_DIR}/*; 
+	cp "/home/mylord/esp_pf/${1}/${2}_system/Hardware/package/sd_card/"* ${BF_DIR}/; 
+	cp "/home/mylord/esp_pf/ws/${2}_system_hw_link/Hardware/vadd.build/link/vivado/vpl/prj/prj.runs/impl_1/"zcu111_custom_pfm_wrapper.bit  ${BF_DIR}/; 
+	sshpass -p "Rick135" scp -o StrictHostKeyChecking=no "${BF_DIR}"/* richard@10.83.16.12:/tftp/current/;
+	sshpass -p "root" scp -o StrictHostKeyChecking=no "${BF_DIR}"/* root@10.83.16.13:/mnt/sd-mmcblk0p3/;
+	unset -f cdhw_func;
+	 }; cp_bf_func'
