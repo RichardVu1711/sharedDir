@@ -95,11 +95,11 @@ private:
 public:
 //	srcObj(std::string obs_path);
 	std::string obs_path;
-//	fixed_type state[NUM_VAR];
-//	fixed_type pxx[NUM_VAR];
-//	fixed_type prtcls[NUM_PARTICLES*NUM_VAR];
-//	fixed_type wt[NUM_PARTICLES*1];
 	fixed_type obs[N_OBS*10];
+	fixed_type state[NUM_VAR];
+	fixed_type pxx[NUM_VAR];
+//	fixed_type wt[NUM_PARTICLES*1];
+//	fixed_type prtcls[NUM_PARTICLES*NUM_VAR];
 	msmt msmtinfo;	// data measurement
 	int n_prtcls; // the number of particles that is running on PL
 	status excute_status;
