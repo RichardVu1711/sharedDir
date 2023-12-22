@@ -25,6 +25,10 @@ int main(int argc, char** argv) {
 	std::string datapth = "";
 	srcObj srcx[N_SRC];
 	ESP_PF imp(&argc,&argv);
+    for(int i=0; i < N_SRC;i++){
+        srcx[i] = srcObj("/mnt/test_data/obsVal2/Init/obsVals2.csv",imp.esp_control.q[i]);
+    }
+
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <XCLBIN File>" << std::endl;
         return EXIT_FAILURE;
