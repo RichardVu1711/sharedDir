@@ -17,3 +17,17 @@ alias cp_bf='cp_bf_func(){
 	sshpass -p "root" scp -o StrictHostKeyChecking=no "${BF_DIR}"/* root@10.83.16.13:/mnt/sd-mmcblk0p3/;
 	unset -f cdhw_func;
 	 }; cp_bf_func'
+	 
+#alias for copy essential files to tftp server
+alias cp_sd='cp_sd_func(){
+	if  [ "$1" == "-h" ] || [ "$#" -ne 2 ]; then
+		echo "cp_bf work_space_directory project_name"
+		return 1
+    	fi
+	rm -rf ${BF_DIR}/*; 
+	cp "/home/rick/Desktop/git/BenchMarking/${1}/${2}_system/Hardware/package/sd_card/"* ${BF_DIR}/; 
+	cp "/home/rick/Desktop/git/BenchMarking/${1}/${2}_system_hw_link/Hardware/vadd.build/link/vivado/vpl/prj/prj.runs/impl_1/"zcu111_custom_pfm_wrapper.bit  ${BF_DIR}/; 
+	cp ${BF_DIR}/* "/media/rick/BOOT/";
+	unset -f cdhw_func;
+	 }; cp_sd_func'
+	 
