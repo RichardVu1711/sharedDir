@@ -16,6 +16,8 @@
 
 #include "xcl2.hpp"
 #include "obj_code/srcObj.h"
+#include "obj_code/ESPObj.h"
+
 #include <algorithm>
 #include <vector>
 #define DATA_SIZE 4096
@@ -23,7 +25,7 @@
 int main(int argc, char** argv) {
 
 	std::string datapth = "";
-	srcObj srcx[N_SRC];
+	srcObj srcx [N_SRC];
 	ESP_PF imp(&argc,&argv);
     for(int i=0; i < N_SRC;i++){
         srcx[i] = srcObj("/mnt/test_data/obsVal2/Init/obsVals2.csv",imp.esp_control.q[i]);

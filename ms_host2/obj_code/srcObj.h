@@ -17,8 +17,7 @@
 
 #include "xcl2.hpp"
 #include "experimental/xrt_profile.h"
-
-#include <filesystem>	// replace filname
+#include <iostream>
 
 // extern std::vector<cl::Device> devices;
 // extern cl::Device device;
@@ -70,17 +69,6 @@ typedef struct ptrBuff{
 }ptrBuff;
 
 
-typedef struct queue{
-	std::vector<cl::Device> devices;
-	cl::Device device;
-	cl::Context context;
-	cl::Program program;
-	std::vector<cl::Platform> platforms;
-	cl::CommandQueue q[N_SRC];
-	int iterations;
-	int MCrun;
-} queue;
-
 //kernel sigma parameter
 typedef struct k_sigma{
 	ptrBuff pxxSqrt;
@@ -107,26 +95,18 @@ typedef struct smpl_info{
 } smpl_info;
 
 
-class ESP_PF{
-public:
-	ESP_PF(int* argc, char*** argv);
-	queue esp_control;
-	cl::Kernel kPFU;
-	cl::Kernel kCal;
-	cl::Kernel kMPxx;
-	cl::Kernel kSigma;
-	cl::Kernel kCreate;
-};
-
 class srcObj{
 private:
 	// essential functions:
 	// void init_();
 
 public:
+	srcObj(){
+
+	}	//dummy constructor
 	srcObj(std::string obs_path,cl::CommandQueue &q);
 	void buffLink(ptrBuff buffer,size_t in_size,
-				cl::CommandQueue &q,
+				cl::CommandQueue& q,
 				rw_mode io_mode, PSPL alloc);
 	std::string obs_path;
 	fixed_type obs[N_OBS*10];
