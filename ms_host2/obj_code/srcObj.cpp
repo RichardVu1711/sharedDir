@@ -18,7 +18,9 @@ size_t size_pzx = NUM_PARTICLES*N_MEAS*N_MEAS*sizeof(fixed_type);
 // state and pxx will be in the same path
 // but with different names as: Pxx_in and state_in}
 // initialise the esp pf with data path
-srcObj::srcObj(std::string obs_path,cl::CommandQueue &q){
+srcObj::srcObj(std::string obs_path,
+				cl::Context& context,
+				cl::CommandQueue& q){
 	std::string state_path = obs_path;
 	std::string pxx_path = obs_path;
 	size_t lastSlashPos = obs_path.find_last_of('/');
@@ -38,36 +40,43 @@ srcObj::srcObj(std::string obs_path,cl::CommandQueue &q){
 
 	// create a link between ptr and openCL buffer with the given size and mode
 	// for the sigmaComp Kernel Data
-	buffLink(smpl_phase.sigmaInfo.pxxSqrt,size_state,q,RBUF,PL);
-	buffLink(smpl_phase.sigmaInfo.rndIn,size_large,q,RBUF,PL);
-	buffLink(smpl_phase.sigmaInfo.sigMat,size_large,q,WBUF,PL);
+	buffLink(smpl_phase.sigmaInfo.pxxSqrt,size_state,context,q,RBUF,PL);
 
-	// dynamic memory allocation for rk4 as it is PS allocated
-	buffLink(smpl_phase.rk4Info.stateIn,size_state,q,RBUF,PS);
-	buffLink(smpl_phase.rk4Info.statePro,size_state,q,WBUF,PS);
-
-	// for the ESPCrtParticles kernel Data
-	buffLink(smpl_phase.espCrtInfo.statePro,size_state,q,RBUF,PL);
-	buffLink(smpl_phase.espCrtInfo.sigMat,size_large,q,RBUF,PL);
-	buffLink(smpl_phase.espCrtInfo.prtcls,size_large,q,WBUF,PL);
+	buffLink(smpl_phase.sigmaInfo.rndIn,size_large,context,q,RBUF,PL);
+	buffLink(smpl_phase.sigmaInfo.sigMat,size_large,context,q,WBUF,PL);
+//
+//	// dynamic memory allocation for rk4 as it is PS allocated
+//	buffLink(smpl_phase.rk4Info.stateIn,size_state,context,q,RBUF,PS);
+//	buffLink(smpl_phase.rk4Info.statePro,size_state,context,q,WBUF,PS);
+//
+//	// for the ESPCrtParticles kernel Data
+//	buffLink(smpl_phase.espCrtInfo.statePro,size_state,context,q,RBUF,PL);
+//	buffLink(smpl_phase.espCrtInfo.sigMat,size_large,context,q,RBUF,PL);
+//	buffLink(smpl_phase.espCrtInfo.prtcls,size_large,context,q,WBUF,PL);
 
 }
 //  create buff:
 //	PS: dynamic memory allocation the ptr
 //	PL: create Opencl Buffer and linked it to the ptr
 void srcObj::buffLink(ptrBuff buffer,size_t in_size,
-				cl::CommandQueue& q,
-				rw_mode io_mode, PSPL alloc){
+					cl::Context& context,
+					cl::CommandQueue& q,
+					rw_mode io_mode, PSPL alloc){
 	cl_int err;
+	fixed_type* ptr;
+	cl::Buffer sth(context, CL_MEM_READ_ONLY, in_size, NULL, &err);
 	// if PS
 	if(alloc == PS){
 		buffer.ptr=(fixed_type*) malloc(in_size);
 	}
 	else{  // PL => create OpenCL buffer + buff link
 		if(io_mode == RBUF){
-		    OCL_CHECK(err, buffer.ptr = (fixed_type*)q.enqueueMapBuffer (buffer.buf , CL_TRUE , CL_MAP_WRITE , 0, in_size, NULL, NULL, &err));
+			//BUG: CREATE A BUFFER FIRST YOU DUMPASS
+			OCL_CHECK(err, buffer.buf = cl::Buffer(context, CL_MEM_READ_ONLY, in_size, NULL, &err));
+			OCL_CHECK(err, buffer.ptr = (fixed_type*)q.enqueueMapBuffer ( buffer.buf , CL_TRUE , CL_MAP_WRITE , 0, in_size, NULL, NULL, &err));
 		}
 		else{
+			buffer.buf = cl::Buffer(context, CL_MEM_WRITE_ONLY, in_size, NULL, &err);
 		    OCL_CHECK(err, buffer.ptr = (fixed_type*)q.enqueueMapBuffer (buffer.buf , CL_TRUE , CL_MAP_READ , 0, in_size, NULL, NULL, &err));
 		}
 	}

@@ -15,6 +15,7 @@
 
 #include <CL/cl2.hpp>
 
+#include "ESPObj.h"
 #include "xcl2.hpp"
 #include "experimental/xrt_profile.h"
 #include <iostream>
@@ -104,10 +105,13 @@ public:
 	srcObj(){
 
 	}	//dummy constructor
-	srcObj(std::string obs_path,cl::CommandQueue &q);
+	srcObj(std::string obs_path,
+					cl::Context& context,
+					cl::CommandQueue& q);
 	void buffLink(ptrBuff buffer,size_t in_size,
-				cl::CommandQueue& q,
-				rw_mode io_mode, PSPL alloc);
+					cl::Context& context,
+					cl::CommandQueue& q,
+					rw_mode io_mode, PSPL alloc);
 	std::string obs_path;
 	fixed_type obs[N_OBS*10];
 	fixed_type state[NUM_VAR];
