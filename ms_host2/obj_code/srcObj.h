@@ -67,6 +67,7 @@ typedef struct ptrBuff{
 	fixed_type* ptr;
 	size_t size;
 	rw_mode mode;	//mode = 0 => read, mode = 1 => write
+	PSPL allo_mode;
 }ptrBuff;
 
 
@@ -90,9 +91,9 @@ typedef struct k_espCrt{
 
 //Sampling Data
 typedef struct smpl_info{
+	k_espCrt espCrtInfo;
 	k_sigma sigmaInfo;
 	k_rk4 rk4Info;	// this block is allocated under PS
-	k_espCrt espCrtInfo;
 } smpl_info;
 
 
@@ -106,9 +107,9 @@ public:
 
 	}	//dummy constructor
 	srcObj(std::string obs_path,
-					cl::Context& context,
-					cl::CommandQueue& q);
-	void buffLink(ptrBuff buffer,size_t in_size,
+			cl::Context& context,
+			cl::CommandQueue& q);
+	void buffLink(ptrBuff* buffer,size_t in_size,
 					cl::Context& context,
 					cl::CommandQueue& q,
 					rw_mode io_mode, PSPL alloc);
