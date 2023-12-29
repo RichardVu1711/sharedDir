@@ -6,7 +6,7 @@
 
 
 #define N_SRC 1
-#define N_OBS 52
+#define N_OBS 2
 
 #include "../global_define/global_define.h"
 #include "../global_define/GISmsmt_prcs.h"
@@ -103,6 +103,10 @@ private:
 	// void init_();
 
 public:
+	smpl_info smpl_phase;
+	fixed_type obs[N_OBS*10];
+	fixed_type state[NUM_VAR];
+	fixed_type pxx[NUM_VAR];
 	srcObj(){
 
 	}	//dummy constructor
@@ -113,16 +117,11 @@ public:
 					cl::Context& context,
 					cl::CommandQueue& q,
 					rw_mode io_mode, PSPL alloc);
-	std::string obs_path;
-	fixed_type obs[N_OBS*10];
-	fixed_type state[NUM_VAR];
-	fixed_type pxx[NUM_VAR];
-//	fixed_type wt[NUM_PARTICLES*1];
 //	fixed_type prtcls[NUM_PARTICLES*NUM_VAR];
-	msmt msmtinfo;	// data measurement
-	int n_prtcls; // the number of particles that is running on PL
-	status excute_status;
-	smpl_info smpl_phase;
+//	fixed_type wt[NUM_PARTICLES*1];
+//	msmt msmtinfo;	// data measurement
+//	int n_prtcls; // the number of particles that is running on PL
+//	status excute_status;
 
 };
 
