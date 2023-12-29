@@ -29,12 +29,12 @@ srcObj::srcObj(std::string obs_path,
 		state_path.replace(lastSlashPos + 1, std::string::npos, "state_in.csv");
 		pxx_path.replace(lastSlashPos + 1, std::string::npos, "pxx_in.csv");
 	}
-	convert_FP(read_csvMulLine(obs_path,0, 0+N_OBS, 10),
-								obs, 1, N_OBS*10, -1);
-	convert_FP(read_csvMulLine(state_path,0, 0+NUM_VAR, 1),
-								state, 1, NUM_VAR, -1);
-	convert_FP(read_csvMulLine(pxx_path,0, 0+NUM_VAR, NUM_VAR),
-								pxx, 1, NUM_VAR*NUM_VAR, -1);
+//	convert_FP(read_csvMulLine(obs_path,0, 0+N_OBS, 10),
+//								obs, 1, N_OBS*10, -1);
+//	convert_FP(read_csvMulLine(state_path,0, 0+NUM_VAR, 1),
+//								state, 1, NUM_VAR, -1);
+//	convert_FP(read_csvMulLine(pxx_path,0, 0+NUM_VAR, NUM_VAR),
+//								pxx, 1, NUM_VAR*NUM_VAR, -1);
 	cout << "state -- Pxx\n";
 	for(int i=0; i < 13;i++)
 	{
@@ -63,6 +63,13 @@ srcObj::srcObj(std::string obs_path,
 	buffLink(&smpl_phase.espCrtInfo.statePro,size_state,context,q,RBUF,PL);
 	buffLink(&smpl_phase.espCrtInfo.sigMat,size_large,context,q,RBUF,PL);
 	buffLink(&smpl_phase.espCrtInfo.prtcls,size_large,context,q,WBUF,PL);
+
+	convert_FP(read_csvMulLine(obs_path,0, 0+N_OBS, 10),
+								obs, 1, N_OBS*10, -1);
+	convert_FP(read_csvMulLine(state_path,0, 0+NUM_VAR, 1),
+								state, 1, NUM_VAR, -1);
+	convert_FP(read_csvMulLine(pxx_path,0, 0+NUM_VAR, NUM_VAR),
+								pxx, 1, NUM_VAR*NUM_VAR, -1);
 
 }
 //  create buff:

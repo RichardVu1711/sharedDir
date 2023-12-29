@@ -65,7 +65,7 @@ typedef struct rndCtrl{
 typedef struct ptrBuff{
 	cl::Buffer buf;
 	fixed_type* ptr;
-	size_t size;
+//	size_t size;
 	rw_mode mode;	//mode = 0 => read, mode = 1 => write
 	PSPL allo_mode;
 }ptrBuff;
