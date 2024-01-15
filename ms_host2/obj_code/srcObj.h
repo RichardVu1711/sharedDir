@@ -6,7 +6,6 @@
 
 
 #define N_SRC 1
-#define N_OBS 2
 
 #include "../global_define/global_define.h"
 #include "../global_define/GISmsmt_prcs.h"
@@ -27,75 +26,6 @@
 // extern std::vector<cl::Platform> platforms;
 // extern cl::CommandQueue q[Q_LEN];
 
-extern size_t size_Mat;
-extern size_t size_Mat_S;
-extern size_t size_wt;
-
-extern size_t size_pxx;	// NUM_VAR*NUM_VAR -- 13 x 13
-extern size_t size_large; // NUM_VAR*NUM_PARTICLES -- 13 x 1024
-extern size_t size_state; // NUM_VAR * 1 -- 13x1
-
-extern size_t size_msmt;
-extern size_t size_Rmat;
-
-extern size_t size_zDiff;
-extern size_t size_pzx;
-
-typedef enum PSPL{
-	PS,
-	PL
-} PSPL;
-typedef enum rw_mode{
-	RBUF,
-	WBUF
-} rw_mode;
-typedef enum status{
-	INIT,
-	SAMP,
-	CAL,
-	RSMPL,
-	IDLE
-} status;
-
-typedef struct rndCtrl{
-	uint8_t isInit;
-	int seed;
-} rndCtrl;
-
-typedef struct ptrBuff{
-	cl::Buffer buf;
-	fixed_type* ptr;
-//	size_t size;
-	rw_mode mode;	//mode = 0 => read, mode = 1 => write
-	PSPL allo_mode;
-}ptrBuff;
-
-
-//kernel sigma parameter
-typedef struct k_sigma{
-	ptrBuff pxxSqrt;
-	ptrBuff rndIn;
-	ptrBuff	sigMat;
-} k_sigma;
-
-typedef struct k_rk4{
-	ptrBuff stateIn;
-	ptrBuff statePro;
-} k_rk4;
-
-typedef struct k_espCrt{
-	ptrBuff statePro;
-	ptrBuff sigMat;
-	ptrBuff	prtcls;
-} k_espCrt;
-
-//Sampling Data
-typedef struct smpl_info{
-	k_espCrt espCrtInfo;
-	k_sigma sigmaInfo;
-	k_rk4 rk4Info;	// this block is allocated under PS
-} smpl_info;
-
 
 class srcObj{
 private:
@@ -103,20 +33,25 @@ private:
 	// void init_();
 
 public:
-	smpl_info smpl_phase;
+//	smpl_info smpl_phase;
+	fixed_type prtcls[NUM_VAR*NUM_PARTICLES];
+	fixed_type sigma[NUM_VAR*NUM_PARTICLES];
+	fixed_type rndSigma[NUM_VAR*NUM_PARTICLES];
+	fixed_type rndrk4[NUM_VAR*4];
+//	fixed_type state_pro[NUM_VAR];
+
 	fixed_type obs[N_OBS*10];
 	fixed_type state[NUM_VAR];
-	fixed_type pxx[NUM_VAR];
+	fixed_type pxx[NUM_VAR*NUM_VAR];
+	uint8_t srcIdx;
 	srcObj(){
 
 	}	//dummy constructor
 	srcObj(std::string obs_path,
+			uint8_t idx,
 			cl::Context& context,
 			cl::CommandQueue& q);
-	void buffLink(ptrBuff* buffer,size_t in_size,
-					cl::Context& context,
-					cl::CommandQueue& q,
-					rw_mode io_mode, PSPL alloc);
+
 //	fixed_type prtcls[NUM_PARTICLES*NUM_VAR];
 //	fixed_type wt[NUM_PARTICLES*1];
 //	msmt msmtinfo;	// data measurement

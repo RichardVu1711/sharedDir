@@ -4,6 +4,7 @@
 #include "Fixed_point_type.h"
 #define NUM_PARTICLES	1024
 #define	NUM_VAR	13
+#define N_OBS 2
 #define FS_C 0.1024683122
 #define AOASTD_SQRT 0.000149262535695487	//1 degree
 #define TDOASTD_SQRT 49.0

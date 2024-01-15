@@ -3,7 +3,6 @@
 #include "ap_fixed.h"
 #include "hls_math.h"
 #include <cstdio>
-
 #define WORD_LENGTH 32
 #define INT_LEN 11
 	// Q[11,21]
