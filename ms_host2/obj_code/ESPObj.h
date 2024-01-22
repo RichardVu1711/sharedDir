@@ -9,10 +9,10 @@
 //#define N_PL 1024
 //#define N_PORTION NUM_PARTICLES/N_PL
 
-#include "../global_define/global_define.h"
-#include "../global_define/GISmsmt_prcs.h"
-#include "../global_define/mat_lib.h"
-#include "../global_define/read_write_csv.h"
+#include "../lib/global_define.h"
+#include "../lib/GISmsmt_prcs.h"
+#include "../lib/mat_lib.h"
+#include "../lib/read_write_csv.h"
 #include "srcObj.h"
 #include <CL/cl2.hpp>
 
@@ -40,7 +40,7 @@ typedef enum rw_mode{
 	WBUF
 } rw_mode;
 typedef enum Bstatus{
-	IDLE,
+	READY,
 	EXEC,
 	WAIT
 } Bstatus;
@@ -61,6 +61,13 @@ typedef struct rndCtrl{
 	uint8_t isInit;
 	int seed;
 } rndCtrl;
+
+//typedef enum block{
+//	SIGMAT,
+//	RK4,
+//	SMPL,
+//	MPXX
+//} block;
 
 typedef struct queue{
 	std::vector<cl::Device> devices;
@@ -122,6 +129,7 @@ typedef struct k_mPxx{
 	PSPL allo_mode;
 } k_mPxx;
 
+
 typedef struct k_axis2mm{
 	ptrBuff prtclsIn;
 	ptrBuff prtclsOut;
@@ -129,6 +137,17 @@ typedef struct k_axis2mm{
 	PSPL allo_mode;
 } k_axis2mm;
 
+typedef struct k_calW{
+	ptrBuff prtcls;
+	ptrBuff msmtinfo;
+	ptrBuff R_Mat;
+	ptrBuff Pxx_;
+	ptrBuff pzx;
+	ptrBuff zDiff;
+	int index;
+	cl::Kernel kCalW;
+	PSPL allo_mode;
+} k_calW;
 //Sampling Data
 typedef struct smpl_info{
 	k_espCrt espCrtInfo;
@@ -140,6 +159,12 @@ typedef struct smpl_info{
 	block_fsm status;
 } smpl_info;
 
+typedef struct calW_info{
+	k_calW calWInfo;
+	block_fsm status;
+} calW_info;
+
+
 void event_cb(cl_event event1, cl_int cmd_status, void *data);
 
 class ESP_PF{
@@ -147,6 +172,7 @@ public:
 
 	queue esp_control;
 	smpl_info smpl_phase;
+	calW_info calW_phase;
 	IRQflag irq_mode;
 	ESP_PF(int* argc, char*** argv);
 	void buffLink(ptrBuff* buffer,size_t in_size,
@@ -171,13 +197,36 @@ public:
 	PSPL getAlloMode_ESPCrtParticles(){
 		return smpl_phase.espCrtInfo.allo_mode;
 	}
+	PSPL getAlloMode_calW(){
+		return calW_phase.calWInfo.allo_mode;
+	}
+	Bstatus getBlockStatus_S(){
+		return smpl_phase.status.block_status;
+	}
+	Bstatus getBlockStatus_C(){
+		return calW_phase.status.block_status;
+	}
+	void setBlockStatus_S(Bstatus in_status){
+		smpl_phase.status.block_status = in_status;
+	}
+	void setBlockStatus_C(Bstatus in_status){
+		calW_phase.status.block_status = in_status;
+	}
 	int flagCheck_S(int qIdx);
+	int flagCheck_C(int qIdx);
 	void isClearDoneSFlag(){
 		//clear isDone and isCallBack
 		smpl_phase.status.isDone =0;
 		smpl_phase.status.isCallBack = 0;
 		smpl_phase.status.flag = cl::Event();
 	}
+	void isClearDoneCFlag(){
+		//clear isDone and isCallBack
+		calW_phase.status.isDone =0;
+		calW_phase.status.isCallBack = 0;
+		calW_phase.status.flag = cl::Event();
+	}
+	void status_init(block_fsm* in_status);
 //	void event_cb(cl_event event1, cl_int cmd_status, void *data);
 	void set_callback(cl::Event event);
 };

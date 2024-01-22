@@ -1,5 +1,6 @@
-#include "read_write_csv.h"
-#include "mat_lib.h"
+#include "../lib/read_write_csv.h"
+
+#include "../lib/mat_lib.h"
 
 using namespace std;
 std::vector<double> read_csv(std::string filename){

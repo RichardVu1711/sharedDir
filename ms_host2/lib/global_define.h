@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdio>
 
-#include "Fixed_point_type.h"
+#include "../lib/Fixed_point_type.h"
 #define NUM_PARTICLES	1024
 #define	NUM_VAR	13
 #define N_OBS 2

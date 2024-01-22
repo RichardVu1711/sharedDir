@@ -1,4 +1,5 @@
-#include "global_define.h"
+#include "../lib/global_define.h"
+
 
 // sigma is sqrt(diag(double(Qk))))
 

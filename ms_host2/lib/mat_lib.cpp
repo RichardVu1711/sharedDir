@@ -1,4 +1,5 @@
-#include"mat_lib.h"
+#include "../lib/mat_lib.h"
+
 
 void showmat_S(Mat_S* A){
 

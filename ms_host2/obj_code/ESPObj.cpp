@@ -91,45 +91,55 @@ ESP_PF::ESP_PF(int* argc, char*** argv){
 		std::cout << "Failed to program any device found, exit!\n";
 //		exit(EXIT_FAILURE);
 	}
-		smpl_phase.sigmaInfo.allo_mode = PL;
-		smpl_phase.rk4Info.allo_mode = PS;
-		smpl_phase.espCrtInfo.allo_mode = PL;
-		smpl_phase.mPxxInfo.allo_mode = PL;
-		smpl_phase.axis2mmInfo.allo_mode = PL;
-		this->irq_mode = SW_IRQ;
-		if(irq_mode == SW_IRQ){
-			this->smpl_phase.status.isCallBack= 0;
-		}
-		// configure state
-		smpl_phase.status.current_state = 0;
-		smpl_phase.status.next_state = 0;
-		smpl_phase.status.previous_state = 0;
-		smpl_phase.status.block_status = IDLE;
-		smpl_phase.status.isDone = 0;
-		// configure buffer
-		buffLink(&smpl_phase.sigmaInfo.pxxSqrt,size_state,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.sigmaInfo.rndIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.sigmaInfo.sigMat,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+	smpl_phase.sigmaInfo.allo_mode = PL;
+	smpl_phase.rk4Info.allo_mode = PS;
+	smpl_phase.espCrtInfo.allo_mode = PL;
+	smpl_phase.mPxxInfo.allo_mode = PL;
+	smpl_phase.axis2mmInfo.allo_mode = PL;
 
-		// dynamic memory allocation for rk4 as it is PS allocated
-		buffLink(&smpl_phase.rk4Info.stateIn,size_state,esp_control.context,esp_control.q[0],RBUF,PS);
-		buffLink(&smpl_phase.rk4Info.statePro,size_state,esp_control.context,esp_control.q[0],WBUF,PS);
-		buffLink(&smpl_phase.rk4Info.rndrk4,size_rndrk4,esp_control.context,esp_control.q[0],WBUF,PS);
+	calW_phase.calWInfo.allo_mode = PS;
 
-		// for the ESPCrtParticles kernel Data
-		buffLink(&smpl_phase.espCrtInfo.statePro,size_state,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.espCrtInfo.sigMat,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.espCrtInfo.prtcls,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+	// configure IRQ mode
+	this->irq_mode = SW_IRQ;
+	if(irq_mode == SW_IRQ){
+		this->smpl_phase.status.isCallBack= 0;
+	}
+	// configure state
+	status_init(&smpl_phase.status);
+	status_init(&calW_phase.status);
 
-		// for the mPxx kernel Data
-		buffLink(&smpl_phase.mPxxInfo.prtcls,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.mPxxInfo.mPxx,size_pxx,esp_control.context,esp_control.q[0],WBUF,PL);
-		// for the debugger
-		buffLink(&smpl_phase.axis2mmInfo.prtclsIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
-		buffLink(&smpl_phase.axis2mmInfo.prtclsOut,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+	// configure buffer
+	buffLink(&smpl_phase.sigmaInfo.pxxSqrt,size_state,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.sigmaInfo.rndIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.sigmaInfo.sigMat,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
 
-		//configure the kernel
-		kernel_config(&smpl_phase.sigmaInfo.kSigma,esp_control.context, esp_control.program);
+	// dynamic memory allocation for rk4 as it is PS allocated
+	buffLink(&smpl_phase.rk4Info.stateIn,size_state,esp_control.context,esp_control.q[0],RBUF,PS);
+	buffLink(&smpl_phase.rk4Info.statePro,size_state,esp_control.context,esp_control.q[0],WBUF,PS);
+	buffLink(&smpl_phase.rk4Info.rndrk4,size_rndrk4,esp_control.context,esp_control.q[0],WBUF,PS);
+
+	// for the ESPCrtParticles kernel Data
+	buffLink(&smpl_phase.espCrtInfo.statePro,size_state,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.espCrtInfo.sigMat,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.espCrtInfo.prtcls,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+
+	// for the mPxx kernel Data
+	buffLink(&smpl_phase.mPxxInfo.prtcls,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.mPxxInfo.mPxx,size_pxx,esp_control.context,esp_control.q[0],WBUF,PL);
+	// for the debugger
+	buffLink(&smpl_phase.axis2mmInfo.prtclsIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.axis2mmInfo.prtclsOut,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+
+	// for the calW kernel Data
+	buffLink(&calW_phase.calWInfo.prtcls,size_large,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+	buffLink(&calW_phase.calWInfo.msmtinfo,size_msmt,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+	buffLink(&calW_phase.calWInfo.R_Mat,size_Rmat,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+	buffLink(&calW_phase.calWInfo.Pxx_,size_pxx,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+	buffLink(&calW_phase.calWInfo.pzx,size_pzx,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+	buffLink(&calW_phase.calWInfo.zDiff,size_zDiff,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
+
+	//configure the kernel
+	kernel_config(&smpl_phase.sigmaInfo.kSigma,esp_control.context, esp_control.program);
 }
 
 //  create buff:
@@ -189,6 +199,16 @@ void ESP_PF::kernel_config(	cl::Kernel* kObj,
 		OCL_CHECK(err, err = this->smpl_phase.axis2mmInfo.kaxis2mm.setArg(1,smpl_phase.axis2mmInfo.prtclsOut.buf));
 
 	}
+	if(calW_phase.calWInfo.allo_mode == PL){
+		this->calW_phase.calWInfo.kCalW = cl::Kernel(program,"calWeights", &err);
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(0,calW_phase.calWInfo.prtcls.buf));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(1,calW_phase.calWInfo.msmtinfo.buf));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(2,calW_phase.calWInfo.R_Mat.buf));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(3,calW_phase.calWInfo.index));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(4,calW_phase.calWInfo.Pxx_.buf));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(5,calW_phase.calWInfo.zDiff.buf));
+		OCL_CHECK(err,err = this->calW_phase.calWInfo.kCalW.setArg(6,calW_phase.calWInfo.pzx.buf));
+	}
 }
 
 // return 0 if the flag status is completed
@@ -227,8 +247,38 @@ int ESP_PF::flagCheck_S(int qIdx){
 	}
 	return 1;
 }
+int ESP_PF::flagCheck_C(int qIdx){
+	if(getAlloMode_calW()==PL){
+		switch(irq_mode){
+		case SEQ:
+			getQueue(qIdx).finish();
+			calW_phase.status.isDone = 1;
+			return 0;
+			break;
+		case POLL:
+			calW_phase.status.isDone = getFlagInfo();
+			return getFlagInfo();
+			break;
+		case SW_IRQ:
+			if(calW_phase.status.isCallBack==0){
+				this->set_callback(calW_phase.status.flag);
+			}
+			return calW_phase.status.isDone;
+			break;
+		default:
+			return -1;
+		}
+	}
 
-
+	return calW_phase.status.isDone;
+}
+void ESP_PF::status_init(block_fsm* in_status){
+	in_status->current_state = 0;
+	in_status->next_state = 0;
+	in_status->previous_state = 0;
+	in_status->block_status = READY;
+	in_status->isDone = 0;
+}
 
 
 void ESP_PF::set_callback(cl::Event event) {

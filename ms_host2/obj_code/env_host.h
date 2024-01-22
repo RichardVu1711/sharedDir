@@ -21,12 +21,6 @@
         } \
     } while (0)
 
-typedef enum block{
-	SIGMAT,
-	RK4,
-	SMPL,
-	MPXX
-} block;
 
 
 int smplPhase_execute(ESP_PF* imp, srcObj* srcX);
@@ -44,3 +38,7 @@ int mPxx_execute(ESP_PF* imp, srcObj* srcX,
 				std::vector<cl::Event> kernel_events,
 				cl::Event* data_events,
 				cl::Event* exec_events);
+
+int calwPhase_execute(ESP_PF* imp, srcObj* srcX, int index);
+int calW_execute(ESP_PF* imp, srcObj* srcX, int index);
+

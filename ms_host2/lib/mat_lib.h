@@ -5,8 +5,8 @@
 #include <iostream>
 #include <typeinfo>
 
-#include "global_define.h"
-#include "mat_type.h"
+#include "../lib/global_define.h"
+#include "../lib/mat_type.h"
 
 
 using namespace std;

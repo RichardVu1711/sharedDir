@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdio>
 
-#include "Fixed_point_type.h"
+#include "../lib/Fixed_point_type.h"
 // consider about padding in here where it is required the total of bytes is a number of power of two
 typedef struct Mat_S{
 	fixed_type entries[NUM_VAR*NUM_VAR];

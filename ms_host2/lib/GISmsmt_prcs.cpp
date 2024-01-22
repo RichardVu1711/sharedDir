@@ -1,4 +1,5 @@
-#include "GISmsmt_prcs.h"
+#include "../lib/GISmsmt_prcs.h"
+
 
 
 // msmt information
@@ -8,7 +9,7 @@
 // aoaIdx contains what node is triggered SN1 =01, SN2= 02, SN3 =03
 // tdoaIdx contains what node is triggered 12 = 01, 13= 02, 23 = 03
 
-msmt msmt_prcs(Mat_S* obsVals)
+msmt msmt_prcs(fixed_type obsVals[])
 {
 	// obsVals dimension is 1x10
 	//msmt.z dimension is 6x1
@@ -24,7 +25,8 @@ msmt msmt_prcs(Mat_S* obsVals)
 	int k = 0;
 	AOA_cal:for(int i =0; i < SN_NUM;i++)
 	{
-		fixed_type AOA = get_ele_S(obsVals,0,i);
+		fixed_type AOA = obsVals[i];
+
 //		fixed_type AOA = obsVals->entries[i];
 //		fixed_type TDOA = obsVals.entries[i+3];
 		if(AOA !=1023)
@@ -46,10 +48,9 @@ msmt msmt_prcs(Mat_S* obsVals)
 			msmtinfo.aoaIdx[i] = 1023;
 		}
 	}
-//		fixed_type TDOA =get_ele_S(obsVals,0,i+3);
 	for(int i =0; i < SN_NUM;i++)
 	{
-		fixed_type TDOA = get_ele_S(obsVals,0,i+3);
+		fixed_type TDOA = obsVals[i+3];
 		if(TDOA !=1023)
 		{
 			// set TDOA values to entries
@@ -65,10 +66,10 @@ msmt msmt_prcs(Mat_S* obsVals)
 			msmtinfo.tdoaIdx[i] = 1023;
 		}
 	}
-	cout << "Valid Data Idx: \n";
-	for(int i=0; i < N_MEAS;i++){
-		cout << msmtinfo.validIdx[i] << ", ";
-	}
+//	cout << "Valid Data Idx: \n";
+//	for(int i=0; i < N_MEAS;i++){
+//		cout << msmtinfo.validIdx[i] << ", ";
+//	}
 
 	return msmtinfo;
 }
@@ -78,3 +79,22 @@ fixed_type deg2Rad(fixed_type deg)
 	fixed_type pi = M_PI;
 	return deg*pi/180;
 }
+
+void R_cal(int n_aoa, int n_tdoa, fixed_type R_noise[N_MEAS])
+{
+	fixed_type AOAstd_sqr = AOASTD_SQRT;
+	fixed_type TDOAstd_sqr = TDOASTD_SQRT;
+//	int n_aoa = n_aoa;
+//	int n_tdoa = n_tdoa;
+	n_meas1:for(int i =0; i < n_aoa+n_tdoa;i++)
+	{
+		if(i < n_aoa)
+			R_noise[i*N_MEAS+i] = AOAstd_sqr;
+		else
+			R_noise[i*N_MEAS+i] = TDOAstd_sqr;
+	}
+	for(int i= n_aoa+n_tdoa; i < N_MEAS;i++){
+		R_noise[i*N_MEAS+i] = 1023;
+	}
+}
+
