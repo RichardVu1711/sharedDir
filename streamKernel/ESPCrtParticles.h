@@ -4,16 +4,24 @@
 
 
 
+//extern "C"
+//{
+//void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
+//					fp_str& sigMat,	// 13*1024
+//					fp_str& prtcls,
+//					fp_str& prtcls2);
+//}
+//void load_data_crt( Mat* prtcls_out,
+//					fp_str& prtcls,
+//					fp_str& prtcls2);
 extern "C"
 {
 void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
 					fp_str& sigMat,	// 13*1024
-					fp_str& prtcls,
-					fp_str& prtcls2);
+					fp_str& prtcls);
 }
 void load_data_crt( Mat* prtcls_out,
-					fp_str& prtcls,
-					fp_str& prtcls2);
+					fp_str& prtcls);
 
 void store_data_crt(fixed_type X_meanpro[NUM_VAR],
 					fp_str& sigMat,	// 13*1024 internal stream

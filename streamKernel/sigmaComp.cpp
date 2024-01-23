@@ -15,7 +15,6 @@ void sigmaComp(fixed_type Pxx[NUM_VAR],
 	fixed_type Pxx_local[NUM_VAR];
 	fixed_type rnd_local[NUM_PARTICLES*NUM_VAR];
 	fixed_type sigMat_local[NUM_VAR*NUM_PARTICLES];
-
 	for(int i=0; i < NUM_VAR;i++)
 	{
 #pragma HLS UNROLL

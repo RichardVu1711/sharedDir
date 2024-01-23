@@ -24,14 +24,13 @@ void store_data_crt(fixed_type X_meanpro[NUM_VAR],
 }
 
 void load_data_crt( Mat* prtcls_out,
-					fp_str& prtcls,
-					fp_str& prtcls2)
+					fp_str& prtcls)
 {
 	for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
 	{
 #pragma HLS PIPELINE
 		prtcls.write(prtcls_out->entries[i]);
-		prtcls2.write(prtcls_out->entries[i]);
+//		prtcls2.write(prtcls_out->entries[i]);
 
 	}
 }
@@ -39,8 +38,7 @@ extern "C"
 {
 void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
 					fp_str& sigMat,	// 13*1024
-					fp_str& prtcls,
-					fp_str& prtcls2)
+					fp_str& prtcls)
 {
 	#pragma HLS PIPELINE off
 
@@ -85,7 +83,7 @@ void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
         sum_S(&X_meanpro_local,&temp_cal,&final);
         setColMat_S2L(&prtcls_local,i,&final);
     }
-    load_data_crt(&prtcls_local,prtcls,prtcls2);
+    load_data_crt(&prtcls_local,prtcls);
 
 }
 }

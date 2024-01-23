@@ -13,5 +13,6 @@ typedef struct msmt{
 } msmt;
 
 
-msmt msmt_prcs(Mat_S* obsVals);
+msmt msmt_prcs(fixed_type obsVals[]);
 fixed_type deg2Rad(fixed_type deg);
+Mat_S R_cal(int n_aoa, int n_tdoa);
