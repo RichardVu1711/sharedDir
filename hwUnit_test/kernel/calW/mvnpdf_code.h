@@ -15,11 +15,17 @@
 #include "tmwtypes.h"
 #include <cstddef>
 #include <cstdlib>
+#include "../lib/mat_lib.h"
+#include "../lib/global_define.h"
 
 // Function Declarations
-extern double mvnpdf_code(double zCap[6], double Mu[6],
-                          double Pzx[6][6], int obs);
-
+extern fixed_type mvnpdf_code(fixed_type zCap_in[6], fixed_type Mu[6],
+							fixed_type Pzx[6*6], int obs);
+extern "C"{
+void mvnpdf_fpCall(fixed_type zCap_in[N_MEAS],
+					fixed_type Pzx[N_MEAS*N_MEAS],
+					int n_obs, fixed_type p_cal[1]);
+}
 #endif
 //
 // File trailer for mvnpdf_code.h

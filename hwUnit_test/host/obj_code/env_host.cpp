@@ -24,6 +24,9 @@ void wait_for_enter() {
 int rsmpPhase_execute(ESP_PF* imp, srcObj* srcX){
 	srcX->src_state = RSMP;
 	uint8_t qIdx = srcX->srcIdx;
+	std::vector<cl::Event>kernel_events;
+	std::vector<cl::Event> data_events(3);	// 3 for three kernels
+	std::vector<cl::Event> exec_events(3);	// 3 for three kernels
 	cl_int err;
 //	xrt::profile::user_range range_rsmp;
 //	xrt::profile::user_range range_exec;
@@ -35,7 +38,7 @@ int rsmpPhase_execute(ESP_PF* imp, srcObj* srcX){
 //		cout << "\nSrc " << qIdx << "is at RSMP \n";
 //		range_rsmp.start("RSMP");
 //		range_exec.start("PS RSMP");
-		MO(mvnpdf_execute(imp,srcX));
+		MO(mvnpdf_execute(imp,srcX,kernel_events,&data_events[0],&exec_events[0]));
 		MO(rsmpl_execute(imp,srcX));
 		MO(PFU_execute(imp,srcX));
 //		range_exec.end();
@@ -133,18 +136,31 @@ int rsmpl_execute(ESP_PF* imp, srcObj* srcX){
 	}
 	return 0;
 }
-int mvnpdf_execute(ESP_PF* imp, srcObj* srcX){
+int mvnpdf_execute(ESP_PF* imp, srcObj* srcX,
+					std::vector<cl::Event> kernel_lst,
+					cl::Event* data_event,
+					cl::Event* exec_event){
 	fixed_type sum_fp =0;
 	int n_obs = srcX->n_obs;
+	uint8_t qIdx = srcX->srcIdx;
 //	imp->isClearDoneRFlag();
 	if(imp->getAlloMode_mvnpdf() == PL){
+//			imp->rsmp_phase.mvnpdfInfo.kMvnpdf.setArg(2,n_obs);
 		// if it is on PL mode, then use the OpenCL buffer
-		memcpy(imp->rsmp_phase.mvnpdfInfo.zDiff.ptr,
-				imp->calW_phase.calWInfo.zDiff.ptr,
-				size_zDiff);
-		memcpy(imp->rsmp_phase.mvnpdfInfo.pzx.ptr,
-				imp->calW_phase.calWInfo.pzx.ptr,
-				size_pzx);
+//		for(int i=0; i <NUM_PARTICLES-1022;i++){
+			memcpy(imp->rsmp_phase.mvnpdfInfo.zDiff.ptr,
+					&imp->calW_phase.calWInfo.zDiff.ptr[0*N_MEAS],
+					size_zDiff_1);
+			memcpy(imp->rsmp_phase.mvnpdfInfo.pzx.ptr,
+					&imp->calW_phase.calWInfo.pzx.ptr[0*N_MEAS*N_MEAS],
+					size_pzx_1);
+			kernel_exec(imp,qIdx,imp->rsmp_phase.mvnpdfInfo.kMvnpdf,
+			{imp->rsmp_phase.mvnpdfInfo.zDiff.buf,imp->rsmp_phase.mvnpdfInfo.pzx.buf},
+			{imp->rsmp_phase.mvnpdfInfo.p_val.buf},kernel_lst,nullptr,&exec_event[0]);
+			imp->getQueue(qIdx).finish();
+			cout <<"p_val = " << imp->rsmp_phase.mvnpdfInfo.p_val.ptr[0] << "\n";
+//		}
+
 	}
 	else{	// PS Mode
 		//mvnpdf_code only can deal with
@@ -156,9 +172,9 @@ int mvnpdf_execute(ESP_PF* imp, srcObj* srcX){
 									n_obs);
 
 			// update wt based on new likelihood values
-			imp->rsmp_phase.mvnpdfInfo.p_val.ptr[i] = p_du;
+			imp->rsmp_phase.mvnpdfInfo.p_val.ptr[0] = p_du;
 			if(p_du!=0)	{
-				srcX->wt[i] = srcX->wt[i]*imp->rsmp_phase.mvnpdfInfo.p_val.ptr[i];	// if the outlier gets here => do not make any decision
+				srcX->wt[i] = srcX->wt[i]*imp->rsmp_phase.mvnpdfInfo.p_val.ptr[0];	// if the outlier gets here => do not make any decision
 			}
 			sum_fp = sum_fp + srcX->wt[i];
 		}
@@ -333,10 +349,7 @@ int smplPhase_execute(ESP_PF* imp, srcObj* srcX){
 			return -1;
 			break;
 		case EXEC:
-//			PROBE_(wait_for_enter());
-//			if(srcX->srcIdx == 1) 	PROBE_(wait_for_enter());
 			imp->isClearDoneSFlag();
-//			cout << "\nSrc " << qIdx + 0x00 << "is at SMPL \n";
 
 			// prepare data for sigmaComp
 			memcpy(imp->smpl_phase.sigmaInfo.rndIn.ptr,srcX->rndSigma,size_large);
@@ -361,9 +374,9 @@ int smplPhase_execute(ESP_PF* imp, srcObj* srcX){
 		case WAIT:
 			if(imp->flagCheck_S(qIdx)!=0){
 				// get data
-				OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueMigrateMemObjects({imp->smpl_phase.axis2mmInfo.prtclsOut.buf,
-																					imp->smpl_phase.mPxxInfo.mPxx.buf},
-																					CL_MIGRATE_MEM_OBJECT_HOST));
+				OCL_CHECK(err, err = imp->getQueue(qIdx).
+											enqueueMigrateMemObjects({imp->smpl_phase.axis2mmInfo.prtclsOut.buf},
+											CL_MIGRATE_MEM_OBJECT_HOST));
 				imp->getQueue(qIdx).finish();
 //				range_smpl.end();
 				memcpy(srcX->mPxx,
@@ -404,30 +417,32 @@ int smplPhase_execute(ESP_PF* imp, srcObj* srcX){
 	return -1;
 }
 
-//int smpl_execut(ESP* imp, srcObj* srcX){
-//	return 0;
-//}
 
 int sigma_execute(ESP_PF* imp, srcObj* srcX,
-				std::vector<cl::Event> kernel_events,
-				cl::Event* data_events,
-				cl::Event* exec_events){
+				std::vector<cl::Event> kernel_lst,
+				cl::Event* data_event,
+				cl::Event* exec_event){
 	cl_int err;
 	uint8_t qIdx = srcX->srcIdx;
 
 	/* 0 means from host*/
 	if(imp->smpl_phase.sigmaInfo.allo_mode == PL){
 		// execute kernel computation
-		OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects({imp->smpl_phase.sigmaInfo.pxxSqrt.buf,
-																				imp->smpl_phase.sigmaInfo.rndIn.buf},0,
-																				NULL,data_events));
-		kernel_events.push_back(data_events[0]);
-		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueNDRangeKernel(imp->smpl_phase.sigmaInfo.kSigma,0,1,1,
-																	&kernel_events,&exec_events[0]));
-		kernel_events.push_back(exec_events[0]);
+		kernel_exec(imp,0,imp->smpl_phase.sigmaInfo.kSigma,
+				{imp->smpl_phase.sigmaInfo.rndIn.buf,
+				imp->smpl_phase.sigmaInfo.pxxSqrt.buf},
+				kernel_lst,exec_event,0);	// passing data to input gate
+
 	}
 	else{
 		// Todo: If allo  == PS, call ESPCrtParticles function, for the future implementation
+		fp_str sigMat;
+		sigmaComp(imp->smpl_phase.sigmaInfo.pxxSqrt.ptr,
+				sigMat,
+				imp->smpl_phase.sigmaInfo.rndIn.ptr);
+		for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++){
+			imp->smpl_phase.sigmaInfo.sigMat.ptr[i] = sigMat.read();
+		}
 		return -1;
 	}
 
@@ -473,19 +488,42 @@ int ESPCrtParticles_execute(ESP_PF* imp, srcObj* srcX,
 		// it is unnecessary to put event scheduling in here
 		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueNDRangeKernel(imp->smpl_phase.espCrtInfo.kCreate,0,1,1,
 																		&kernel_events,exec_events));
-		// for debugging purposes
-		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueNDRangeKernel(imp->smpl_phase.axis2mmInfo.kaxis2mm,0,1,1,
-																	&kernel_events,nullptr));
 		kernel_events.push_back(exec_events[0]);
 
 	}
 	else{
 		//Todo: If Allo == PS, call ESPCrtParticles function, for the futher implementation
-		return -1;
+		fp_str sigMat;
+		fp_str prtcls2;
+		fp_str prtcls;
+		// write data into the stream
+		for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++){
+			sigMat.write(imp->smpl_phase.espCrtInfo.sigMat.ptr[i]);
+		}
+		ESPCrtParticles(imp->smpl_phase.espCrtInfo.statePro.ptr,
+				sigMat,prtcls,prtcls2);
+
+		for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++){
+			imp->smpl_phase.espCrtInfo.prtcls.ptr[i] = prtcls.read();
+		}
+		for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++){
+			prtcls2.read();
+		}
 	}
 	return 0;
 }
+int axis2mm_execute(ESP_PF* imp, srcObj* srcX,
+					std::vector<cl::Event> kernel_lst,
+					cl::Event* exec_events)
+{
+	uint8_t qIdx = srcX->srcIdx;
+	// for debugging purposes
+	kernel_exec(imp,0,imp->smpl_phase.axis2mmInfo.kaxis2mm,
+				{imp->smpl_phase.axis2mmInfo.prtclsOut.buf},kernel_lst,
+				exec_events,1); // passing data to output gate
 
+	return 0;
+}
 int mPxx_execute(ESP_PF* imp, srcObj* srcX,
 				std::vector<cl::Event> kernel_events,
 				cl::Event* data_events,
@@ -501,7 +539,11 @@ int mPxx_execute(ESP_PF* imp, srcObj* srcX,
 		imp->flagCheck_S(qIdx);
 	}
 	else{
-		return -1;
+		fp_str prtlcs;
+		for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++){
+			prtlcs.write(imp->smpl_phase.mPxxInfo.prtcls.ptr[i]);
+		}
+		mean_Pxx(prtlcs,imp->smpl_phase.mPxxInfo.mPxx.ptr);
 	}
 	return 0;
 }

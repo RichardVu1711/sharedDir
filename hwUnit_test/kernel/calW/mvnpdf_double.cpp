@@ -9,7 +9,7 @@
 //
 
 // Include Files
-#include "mvnpdf_code.h"
+#include "mvnpdf_double.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -672,8 +672,8 @@ static double rt_powd_snf(double u0, double u1)
 // Return Type  : double
 //
 extern "C"{
-double mvnpdf_code(fixed_type zCap_in[N_MEAS],
-					fixed_type Pzx[N_MEAS*N_MEAS], int n_obs)
+double mvnpdf_double(double zCap_in[N_MEAS],
+						double Pzx[N_MEAS*N_MEAS], int n_obs)
 {
   double Mu[N_MEAS] = {0,0,0,0,0,0};
   double zCap[6];
@@ -1050,5 +1050,15 @@ double mvnpdf_code(fixed_type zCap_in[N_MEAS],
   }
   return std::exp((-0.5 * tau_data[0] - logSqrtDetSigma_data[0]) -
                   static_cast<double>(d) * 1.8378770664093453 / 2.0);
+}
+}
+
+
+extern "C"{
+void mvnpdf_dpCall(double zCap_in[N_MEAS],
+					double Pzx[N_MEAS*N_MEAS],
+					int n_obs, fixed_type p_cal[1]){
+	p_cal[0] =mvnpdf_double(zCap_in,Pzx,n_obs);
+
 }
 }

@@ -20,3 +20,5 @@
 #define WORKGROUP_SIZE (16)
 
 void rnd_creation(srcObj* srcX, rndCtrl* rng);
+void sigma_tb(ESP_PF* imp, srcObj* srcx, int set, int iter, storeType mode);
+

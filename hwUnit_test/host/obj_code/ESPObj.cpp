@@ -17,6 +17,9 @@ size_t size_Rmat = N_MEAS*sizeof(fixed_type);
 size_t size_zDiff = NUM_PARTICLES*N_MEAS*sizeof(fixed_type);
 size_t size_pzx = NUM_PARTICLES*N_MEAS*N_MEAS*sizeof(fixed_type);
 
+size_t size_zDiff_1 = N_MEAS*sizeof(fixed_type);
+size_t size_pzx_1 = N_MEAS*N_MEAS*sizeof(fixed_type);
+size_t size_fp = sizeof(fixed_type);
 
 void event_cb(cl_event event1, cl_int cmd_status, void* data) {
     cl_int err;
@@ -80,6 +83,8 @@ ESP_PF::ESP_PF(int* argc, char*** argv){
 												CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err));
 			std::cout << "Trying to program device[" << i << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
 		}
+		cout << "buffer config: \n";
+
 		esp_control.program = cl::Program(esp_control.context, {device}, bins, nullptr, &err);
 		if (err != CL_SUCCESS) {
 			std::cout << "Failed to program device[" << i << "] with xclbin file!\n";
@@ -90,24 +95,27 @@ ESP_PF::ESP_PF(int* argc, char*** argv){
 	}
 	if (!valid_device) {
 		std::cout << "Failed to program any device found, exit!\n";
-//		exit(EXIT_FAILURE);
 	}
-	smpl_phase.sigmaInfo.allo_mode = PL;
+
+	smpl_phase.sigmaInfo.allo_mode = PS;
 	smpl_phase.rk4Info.allo_mode = PS;
-	smpl_phase.espCrtInfo.allo_mode = PL;
-	smpl_phase.mPxxInfo.allo_mode = PL;
-	smpl_phase.axis2mmInfo.allo_mode = PL;
+	smpl_phase.espCrtInfo.allo_mode = PS;
+	smpl_phase.mPxxInfo.allo_mode = PS;
+	smpl_phase.axis2mmInfo.allo_mode = PS;
+	smpl_phase.mm2axisInfo.allo_mode = PS;
 
-	calW_phase.calWInfo.allo_mode = PL;
+//	smpl_phase.axis2mmInfo.allo_mode = PL;
 
-	rsmp_phase.mvnpdfInfo.allo_mode = PS;
+	calW_phase.calWInfo.allo_mode = PS;
+	rsmp_phase.mvnpdfInfo.allo_mode = PL;
 	rsmp_phase.rsmplInfo.allo_mode = PS;
-	rsmp_phase.PFUInfo.allo_mode = PL;
+	rsmp_phase.PFUInfo.allo_mode = PS;
 	// configure IRQ mode
 	this->irq_mode = SW_IRQ;
 	if(irq_mode == SW_IRQ){
 		this->smpl_phase.status.isCallBack= 0;
 	}
+	cout << "buffer config: \n";
 	// configure state
 	status_init(&smpl_phase.status);
 	status_init(&calW_phase.status);
@@ -134,6 +142,9 @@ ESP_PF::ESP_PF(int* argc, char*** argv){
 	buffLink(&smpl_phase.axis2mmInfo.prtclsIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
 	buffLink(&smpl_phase.axis2mmInfo.prtclsOut,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
 
+	buffLink(&smpl_phase.mm2axisInfo.prtclsIn,size_large,esp_control.context,esp_control.q[0],RBUF,PL);
+	buffLink(&smpl_phase.mm2axisInfo.prtclsOut,size_large,esp_control.context,esp_control.q[0],WBUF,PL);
+
 	// for the calW kernel Data
 	buffLink(&calW_phase.calWInfo.prtcls,size_large,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
 	buffLink(&calW_phase.calWInfo.msmtinfo,size_msmt,esp_control.context,esp_control.q[0],RBUF,calW_phase.calWInfo.allo_mode);
@@ -143,9 +154,9 @@ ESP_PF::ESP_PF(int* argc, char*** argv){
 	buffLink(&calW_phase.calWInfo.zDiff,size_zDiff,esp_control.context,esp_control.q[0],WBUF,calW_phase.calWInfo.allo_mode);
 
 	// for the mvnpdf kernel Data
-	buffLink(&rsmp_phase.mvnpdfInfo.zDiff,size_zDiff,esp_control.context,esp_control.q[0],RBUF,rsmp_phase.mvnpdfInfo.allo_mode);
-	buffLink(&rsmp_phase.mvnpdfInfo.pzx,size_pzx,esp_control.context,esp_control.q[0],RBUF,rsmp_phase.mvnpdfInfo.allo_mode);
-	buffLink(&rsmp_phase.mvnpdfInfo.p_val,size_wt,esp_control.context,esp_control.q[0],WBUF,rsmp_phase.mvnpdfInfo.allo_mode);
+	buffLink(&rsmp_phase.mvnpdfInfo.zDiff,size_zDiff_1,esp_control.context,esp_control.q[0],RBUF,rsmp_phase.mvnpdfInfo.allo_mode);
+	buffLink(&rsmp_phase.mvnpdfInfo.pzx,size_pzx_1,esp_control.context,esp_control.q[0],RBUF,rsmp_phase.mvnpdfInfo.allo_mode);
+	buffLink(&rsmp_phase.mvnpdfInfo.p_val,size_fp,esp_control.context,esp_control.q[0],WBUF,rsmp_phase.mvnpdfInfo.allo_mode);
 
 	// for the PFU kernel Data
 	buffLink(&rsmp_phase.PFUInfo.prtcls,size_large,esp_control.context,esp_control.q[0],RBUF,rsmp_phase.PFUInfo.allo_mode);
@@ -218,7 +229,10 @@ void ESP_PF::kernel_config(	cl::Kernel* kObj,
 		this->smpl_phase.axis2mmInfo.kaxis2mm = cl::Kernel(program,"axis2mm", &err);
 //		OCL_CHECK(err, err = this->smpl_phase.espCrtInfo.kCreate.setArg(0,smpl_phase.espCrtInfo.statePro.buf)); // data is streamed into this kernel
 		OCL_CHECK(err, err = this->smpl_phase.axis2mmInfo.kaxis2mm.setArg(1,smpl_phase.axis2mmInfo.prtclsOut.buf));
-
+	}
+	if(smpl_phase.mm2axisInfo.allo_mode == PL){
+		this->smpl_phase.mm2axisInfo.kmm2axis = cl::Kernel(program,"mm2axis", &err);
+		OCL_CHECK(err, err = this->smpl_phase.mm2axisInfo.kmm2axis.setArg(0,smpl_phase.mm2axisInfo.prtclsOut.buf));
 	}
 	if(calW_phase.calWInfo.allo_mode == PL){
 		this->calW_phase.calWInfo.kCalW = cl::Kernel(program,"CalPzxZdiff", &err);
@@ -232,10 +246,12 @@ void ESP_PF::kernel_config(	cl::Kernel* kObj,
 	}
 	if(rsmp_phase.mvnpdfInfo.allo_mode == PL){
 		// need to create mvnpdfInfo
-		this->rsmp_phase.mvnpdfInfo.kMvnpdf = cl::Kernel(program, "mvnpdf", &err);
-		OCL_CHECK(err,err = this->rsmp_phase.PFUInfo.kPFU.setArg(0,rsmp_phase.mvnpdfInfo.zDiff.buf));
-		OCL_CHECK(err,err = this->rsmp_phase.PFUInfo.kPFU.setArg(1,rsmp_phase.mvnpdfInfo.pzx.buf));
-		OCL_CHECK(err,err = this->rsmp_phase.PFUInfo.kPFU.setArg(2,rsmp_phase.mvnpdfInfo.p_val.buf));
+		this->rsmp_phase.mvnpdfInfo.kMvnpdf = cl::Kernel(program, "mvnpdf_fpCall", &err);
+		OCL_CHECK(err,err = this->rsmp_phase.mvnpdfInfo.kMvnpdf.setArg(0,rsmp_phase.mvnpdfInfo.zDiff.buf));
+		OCL_CHECK(err,err = this->rsmp_phase.mvnpdfInfo.kMvnpdf.setArg(1,rsmp_phase.mvnpdfInfo.pzx.buf));
+		OCL_CHECK(err,err = this->rsmp_phase.mvnpdfInfo.kMvnpdf.setArg(2,6));
+		OCL_CHECK(err,err = this->rsmp_phase.mvnpdfInfo.kMvnpdf.setArg(3,rsmp_phase.mvnpdfInfo.p_val.buf));
+
 	}
 	if(rsmp_phase.rsmplInfo.allo_mode == PL){
 		this->rsmp_phase.mvnpdfInfo.kMvnpdf = cl::Kernel(program, "resample_pf", &err);
@@ -394,6 +410,8 @@ int ESP_PF::releaseBuff(){
 	// for the debugger
 	buff_free(&smpl_phase.axis2mmInfo.prtclsIn,smpl_phase.axis2mmInfo.allo_mode);
 	buff_free(&smpl_phase.axis2mmInfo.prtclsOut,smpl_phase.axis2mmInfo.allo_mode);
+	buff_free(&smpl_phase.mm2axisInfo.prtclsIn,smpl_phase.mm2axisInfo.allo_mode);
+	buff_free(&smpl_phase.mm2axisInfo.prtclsOut,smpl_phase.mm2axisInfo.allo_mode);
 
 	buff_free(&calW_phase.calWInfo.prtcls,calW_phase.calWInfo.allo_mode);
 	buff_free(&calW_phase.calWInfo.msmtinfo,calW_phase.calWInfo.allo_mode);
@@ -450,19 +468,64 @@ int ESP_PF::buff_free(ptrBuff* buffer,PSPL alloc){
 int kernel_exec(
 		ESP_PF* imp,uint8_t qIdx,
 		cl::Kernel& kernel,
-		vector<cl::Memory> &memIn,
-		vector<cl::Memory> &memOut,
+		vector<cl::Memory> memIn,
+		vector<cl::Memory> memOut,
 		std::vector<cl::Event> kernel_lst,
 		cl::Event* data_events,
 		cl::Event* exec_events){
 	cl_int err;
-	OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects(memIn,0, NULL,data_events));
-	kernel_lst.push_back(data_events[0]);
-	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueNDRangeKernel(kernel,0,1,1,
-																&kernel_lst,&exec_events[0]));
-	kernel_lst.push_back(exec_events[0]);
-	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueMigrateMemObjects(memOut,CL_MIGRATE_MEM_OBJECT_HOST,
-			&kernel_lst,NULL));
+	cout << "Hello\n";
+//	OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects(memIn,0, NULL,data_events));
+	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel,nullptr,exec_events));
+
+	if(data_events!= nullptr) {
+		cout << "Hello";
+		kernel_lst.push_back(data_events[0]);
+		cout << "Hello";
+
+		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel,&kernel_lst,exec_events));
+	}
+	else{
+		cout << "Hello0";
+
+		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel,nullptr,exec_events));
+	}
+
+	if(exec_events!= nullptr) kernel_lst.push_back(exec_events[0]);
+	cout << "Hello0";
+
+	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueMigrateMemObjects(memOut,CL_MIGRATE_MEM_OBJECT_HOST,&kernel_lst,NULL));
+	return 0;
+}
+
+// for the block with axis on 1 side,
+// events should be loaded into the transformation to ensure that
+// blocks with axis are executed at the same time.
+int kernel_exec(
+		ESP_PF* imp,uint8_t qIdx,
+		cl::Kernel& kernel,
+		vector<cl::Memory> memInOut,
+		std::vector<cl::Event> kernel_lst,
+		cl::Event* exec_events,
+		uint8_t io_dir){
+	cl_int err;
+	if(io_dir == 0){ // passing data with input buffer only
+		OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects(memInOut,0,&kernel_lst,exec_events));
+		if(exec_events!= nullptr) kernel_lst.push_back(exec_events[0]);
+
+		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel));
+//		if(exec_events!= nullptr) kernel_lst.push_back(exec_events[0]);
+
+	}
+	else{
+		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel));
+
+		OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueMigrateMemObjects(memInOut,CL_MIGRATE_MEM_OBJECT_HOST,
+			&kernel_lst,exec_events));
+		if(exec_events!= nullptr) kernel_lst.push_back(exec_events[0]);
+
+	}
+
 	return 0;
 }
 

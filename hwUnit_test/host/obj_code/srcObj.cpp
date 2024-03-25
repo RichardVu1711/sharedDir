@@ -38,6 +38,4 @@ srcObj::srcObj(std::string obs_path,
 	// allocate memory for pzx and zDiff
 //	pzx = (fixed_type*) malloc(size_pzx);
 //	zDiff = (fixed_type* ) malloc(size_zDiff);
-
-
 }

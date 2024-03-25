@@ -35,6 +35,10 @@ extern size_t size_Rmat;
 extern size_t size_zDiff;
 extern size_t size_pzx;
 
+extern size_t size_pzx_1; // size pzx for 1 particles
+extern size_t size_zDiff_1; // size zDiff for 1 particles
+extern size_t size_fp;
+
 typedef enum rw_mode{
 	RBUF,
 	WBUF
@@ -63,7 +67,7 @@ typedef struct rndCtrl{
 	int seed;
 } rndCtrl;
 
-typedef struct queue{
+typedef struct queue_ctl{
 	std::vector<cl::Device> devices;
 	cl::Device device;
 	cl::Context context;
@@ -72,8 +76,7 @@ typedef struct queue{
 	cl::CommandQueue q[N_SRC];
 	int iterations;
 	int MCrun;
-} queue;
-
+} queue_ctl;
 
 typedef struct ptrBuff{
 	cl::Buffer buf;
@@ -131,6 +134,13 @@ typedef struct k_axis2mm{
 	PSPL allo_mode = PS;
 } k_axis2mm;
 
+typedef struct k_mm2axis{
+	ptrBuff prtclsIn;
+	ptrBuff prtclsOut;
+	cl::Kernel kmm2axis;
+	PSPL allo_mode = PS;
+} k_mm2axis;
+
 typedef struct k_calW{
 	ptrBuff prtcls;
 	ptrBuff msmtinfo;
@@ -176,6 +186,7 @@ typedef struct smpl_info{
 	k_rk4 rk4Info;	// this block is allocated under PS
 	k_mPxx mPxxInfo;
 	k_axis2mm axis2mmInfo;
+	k_mm2axis mm2axisInfo;
 	fixed_type* tmp_buf = NULL;	// tmp_ is a temp buffer to store particles data
 	block_fsm status;
 } smpl_info;
@@ -199,8 +210,7 @@ class ESP_PF{
 private:
 	int buff_free(ptrBuff* buffer,PSPL alloc);
 public:
-
-	queue esp_control;
+	queue_ctl esp_control;
 	smpl_info smpl_phase;
 	calW_info calW_phase;
 	rsmp_info rsmp_phase;
@@ -294,11 +304,17 @@ public:
 int kernel_exec(
 		ESP_PF* imp,uint8_t qIdx,
 		cl::Kernel& kernel,
-		vector<cl::Memory> &memIn,
-		vector<cl::Memory> &memOut,
+		vector<cl::Memory> memIn,
+		vector<cl::Memory> memOut,
 		std::vector<cl::Event> kernel_lst,
 		cl::Event* data_events,
-		cl::Event* exec_events);
-
+		cl::Event* exec_events) ;
+int kernel_exec(
+		ESP_PF* imp,uint8_t qIdx,
+		cl::Kernel& kernel,
+		vector<cl::Memory> memInOut,
+		std::vector<cl::Event> kernel_lst,
+		cl::Event* exec_events,
+		uint8_t io_dir);
 
 

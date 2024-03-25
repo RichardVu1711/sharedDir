@@ -509,7 +509,7 @@ static void mrdiv(double A_data[], int A_size[2], const double B_data[],
     m = A_size[1];
     if (0 <= m - 1) {
 //      std::copy(&A_data[0], &A_data[m], &b_B_data[0]);
-      for(int ii=0; i <m;ii++) b_B_data[ii] = A_data[ii];
+      for(int ii=0; ii <m;ii++) b_B_data[ii] = A_data[ii];
     }
     b_A_size[0] = B_size[1];
     b_A_size[1] = B_size[0];
@@ -671,11 +671,12 @@ static double rt_powd_snf(double u0, double u1)
 //                double n_obs
 // Return Type  : double
 //
-double mvnpdf_code(double zCap[6], double Mu[6],
-                   double Pzx[6][6], int n_obs)
+fixed_type mvnpdf_code(fixed_type zCap_in[6], fixed_type [6],
+		fixed_type Pzx[6*6], int n_obs)
 {
   double A_data[36];
   double Pzx_fi_data[36];
+  double zCap[6];
   double Y_data[36];
   double xRinv_data[36];
   double logSqrtDetSigma_data[6];
@@ -699,6 +700,9 @@ double mvnpdf_code(double zCap[6], double Mu[6],
   int nmj;
   signed char sz_idx_0;
   boolean_T sigmaIsDiag;
+  for(int i=0; i < 6;i++){
+	  zCap[i] = zCap_in[i];
+  }
   if (1.0 > n_obs) {
     loop_ub = 0;
     b_loop_ub = 0;
@@ -712,7 +716,7 @@ double mvnpdf_code(double zCap[6], double Mu[6],
   Pzx_fi_size[1] = c_loop_ub;
   for (i = 0; i < c_loop_ub; i++) {
     for (i1 = 0; i1 < b_loop_ub; i1++) {
-      Pzx_fi_data[i1 + b_loop_ub * i] = Pzx[i][i1];
+      Pzx_fi_data[i1 + b_loop_ub * i] = Pzx[i*6+i1];
     }
   }
   // MVNPDF Multivariate normal probability density function (pdf).
@@ -1042,6 +1046,17 @@ double mvnpdf_code(double zCap[6], double Mu[6],
       }
     }
   }
-  return std::exp((-0.5 * tau_data[0] - logSqrtDetSigma_data[0]) -
+  double y = std::exp((-0.5 * tau_data[0] - logSqrtDetSigma_data[0]) -
                   static_cast<double>(d) * 1.8378770664093453 / 2.0);
+  return (fixed_type)y;
+}
+
+extern "C"{
+void mvnpdf_fpCall(fixed_type zCap_in[N_MEAS],
+					fixed_type Pzx[N_MEAS*N_MEAS],
+					int n_obs, fixed_type p_cal[1]){
+	fixed_type Mu[6] = {0,0,0,0,0,0};
+	p_cal[0] =mvnpdf_code(zCap_in,Mu,Pzx,n_obs);
+
+}
 }

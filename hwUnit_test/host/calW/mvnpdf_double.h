@@ -8,8 +8,7 @@
 // C/C++ source code generated on  : 02-Feb-2022 00:16:46
 //
 
-#ifndef MVNPDF_CODE_H
-#define MVNPDF_CODE_H
+#pragma once
 
 // Include Files
 #include "tmwtypes.h"
@@ -20,10 +19,9 @@
 
 // Function Declarations
 extern "C" {
-	extern double mvnpdf_code(fixed_type zCap_in[N_MEAS],
-								fixed_type Pzx[N_MEAS*N_MEAS], int n_obs);
+	extern double mvnpdf_double(double zCap_in[N_MEAS],
+							double Pzx[N_MEAS*N_MEAS], int n_obs);
 }
-#endif
 //
 // File trailer for mvnpdf_code.h
 //

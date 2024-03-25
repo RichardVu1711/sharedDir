@@ -9,6 +9,9 @@
 #include "../rk4/rk4.h"
 #include "../resample_pf/resample_pf.h"
 #include "../calW/mvnpdf_code.h"
+#include "../sigmaComp.h"
+#include "../ESPCrtParticles.h"
+#include "../mean_pxx.h"
 // debug macros
 #define MO(function_call) \
     do { \
@@ -38,9 +41,9 @@ int ESPCrtParticles_execute(ESP_PF* imp, srcObj* srcX,
 							cl::Event* data_events,
 							cl::Event* exec_events);
 int sigma_execute(ESP_PF* imp, srcObj* srcX,
-				std::vector<cl::Event> kernel_events,
-				cl::Event* data_events,
-				cl::Event* exec_events);
+				std::vector<cl::Event> kernel_lst,
+				cl::Event* data_event,
+				cl::Event* exec_event);
 int mPxx_execute(ESP_PF* imp, srcObj* srcX,
 				std::vector<cl::Event> kernel_events,
 				cl::Event* data_events,
@@ -51,5 +54,15 @@ int calW_execute(ESP_PF* imp, srcObj* srcX);
 
 int rsmpPhase_execute(ESP_PF* imp, srcObj* srcX);
 int PFU_execute(ESP_PF* imp, srcObj* srcX);
-int mvnpdf_execute(ESP_PF* imp, srcObj* srcX);
+
+int mvnpdf_execute(ESP_PF* imp, srcObj* srcX,
+					std::vector<cl::Event> kernel_lst,
+					cl::Event* data_event,
+					cl::Event* exec_event);
+
 int rsmpl_execute(ESP_PF* imp, srcObj* srcX);
+
+
+int axis2mm_execute(ESP_PF* imp, srcObj* srcX,
+					std::vector<cl::Event> kernel_lst,
+					cl::Event* exec_events);

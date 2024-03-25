@@ -1,7 +1,7 @@
 #include "../lib/read_write_csv.h"
 
 #include "../lib/mat_lib.h"
-
+#define PRECISON 20
 using namespace std;
 std::vector<double> read_csv(std::string filename){
     // Reads a CSV file into a vector of std::vector<double> 
@@ -75,7 +75,7 @@ std::vector<double> read_csvline(std::string filename, int nrow, int ncol)
         int colIdx = 0;
 
         // Extract each integer
-        while(ss >> val)
+        while(ss >>std::setprecision(PRECISON) >> val)
         {
             // Add the current integer to the 'colIdx' column's values vector
             if(rowIdx == nrow) result.push_back(val);
@@ -126,9 +126,8 @@ std::vector<double> read_csvMulLine(std::string filename, int row_start, int nro
 	//      std::cout << "STR: "<< line << "\t";
 			// Keep track of the current column index
 			int colIdx = 0;
-
 			// Extract each integer
-			while(ss >> val)
+			while(ss >>std::setprecision(PRECISON) >> val)
 			{
 				// Add the current integer to the 'colIdx' column's values vector
 				result.push_back(val);
@@ -167,7 +166,7 @@ void write_csv(std::string filename, std::vector<double> dataset, int row, int c
 	{
 		for(int j = 0; j < col; ++j)
 		{
-			myFile << dataset.at(k);
+			myFile << dataset.at(k) << setprecision(PRECISON);
 //            
 //            std::cout << std::fixed << std::setprecision(6) << dataset.at(k);
 //            std::cout << " Write \n";
@@ -255,7 +254,48 @@ std::string Save_Path(std::string Initial_path,std::string name, int id)
 	return path;
 }
 
+int readData(unit_data metaData, fixed_type* data){
 
+	string str;
+	switch(metaData.mode){
+		case special:
+			str = "/SpecialData";
+			break;
+		case impData:
+			str = "/ImpData";
+			break;
+	}
+
+	int start_row = metaData.dim[0];
+	int nRow = metaData.dim[1];
+	int nCol =  metaData.dim[2];
+	int nElements = nRow*nCol;
+	string path =DATA_PATH + std::string("/") + metaData.block + str + std::string("/") + metaData.var +std::to_string(abs(metaData.index)) +".csv";
+//	cout << path << "\n";
+	convert_FP(read_csvMulLine(path,start_row,nRow, nCol),
+							data, 1, nElements, -1);
+	return 0;
+}
+
+int writeData(unit_data metaData, fixed_type* data){
+	string str;
+	switch(metaData.mode){
+		case special:
+			str = "/resultSpecial";
+			break;
+		case impData:
+			str ="/result";
+			break;
+	}
+	int nRow = metaData.dim[1];
+	int nCol =  metaData.dim[2];
+	int nElements = nRow*nCol;
+	string path =DATA_PATH + std::string("/") + metaData.block + str + std::string("/") + metaData.var +std::to_string(metaData.index) +".csv";
+	write_csv(path,	convert_double(data,1,nElements,-1),
+				nRow,nCol);
+
+	return 0;
+}
 
 
 
