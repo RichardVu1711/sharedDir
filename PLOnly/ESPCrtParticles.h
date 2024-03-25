@@ -1,7 +1,18 @@
 #pragma once
-#include "rk4.h"
-#include "normrnd.h"
+#include "lib/global_define.h"
+#include "lib/mat_lib.h"
 
-void ESPCrtParticles(Mat_S* state_input, Mat_S* Pxx_input, Mat* particles,
-		fixed_type rnd_signma[NUM_PARTICLES*NUM_VAR],fixed_type rnd_rk4[4*NUM_VAR]);
-// Mat ESPCrtParticles(Mat_S* state_input, Mat_S* Pxx_input, Mat_S* X_pro, int Ns, int dt);
+
+extern "C"
+{
+void ESPCrtParticles(fixed_type X_meanpro[NUM_VAR],
+					fixed_type sigMat[NUM_VAR*NUM_PARTICLES],
+					fixed_type prtcls[NUM_VAR*NUM_PARTICLES]);
+}
+void load_data_crt( Mat_S* prtcls_out,
+					fixed_type prtcls[NUM_VAR*NUM_PARTICLES]);
+
+void store_data_crt(fixed_type X_meanpro[NUM_VAR],
+					fixed_type sigMat[NUM_VAR*NUM_PARTICLES],
+					Mat_S* X_meanpro_out,
+					Mat* sigMat_out);

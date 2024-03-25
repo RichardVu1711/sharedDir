@@ -1,9 +1,9 @@
 #pragma once
-#include "global_define.h"
-#include "mat_lib.h"
-#include <stdio.h>
-#include <string.h>
-void resamplePF_wrap(Mat* particles, fixed_type wt[NUM_PARTICLES], fixed_type r);
+#include "../lib/global_define.h"
+#include "../lib/mat_lib.h"
+
+void resamplePF_wrap(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
+					fixed_type wt[NUM_PARTICLES], fixed_type r);
 
 int cumsum(fixed_type weights[NUM_PARTICLES],fixed_type edges[NUM_PARTICLES+1]);
 int bin_created(fixed_type start, fixed_type step, fixed_type end, fixed_type boundary[NUM_PARTICLES]);

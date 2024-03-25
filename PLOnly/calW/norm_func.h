@@ -2,27 +2,25 @@
 // Academic License - for use in teaching, academic research, and meeting
 // course requirements at degree granting institutions only.  Not for
 // government, commercial, or other organizational use.
-// File: norm_func.cpp
+// File: norm_func.h
 //
 // MATLAB Coder version            : 5.2
 // C/C++ source code generated on  : 26-Jan-2022 13:02:19
 //
 
-// Include Files
-#include "norm_func.h"
-#include <cmath>
+#ifndef NORM_FUNC_H
+#define NORM_FUNC_H
 
-// Function Definitions
+// Include Files
+#include "../lib/mat_lib.h"
+#include "../lib/global_define.h"
+
+// Function Declarations
+void norm_func(fixed_type X[2],fixed_type* norm_error);
+
+#endif
 //
-// Arguments    : const float X[4]
-// Return Type  : float
-//
-void norm_func(fixed_type X[2],fixed_type* norm_error)
-{
-	ap_fixed<WORD_LENGTH+10,INT_LEN+10> a = X[0]*X[0] + X[1]*X[1];
-	*norm_error = hls::sqrt(a);
-}
-// File trailer for norm_func.cpp
+// File trailer for norm_func.h
 //
 // [EOF]
 //

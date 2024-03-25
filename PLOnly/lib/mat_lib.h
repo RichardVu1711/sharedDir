@@ -30,3 +30,6 @@ void newmat(Mat* A, int n_row, int n_col);
 void getColMat_L2S (Mat* A, int selected_col, Mat_S* SavedMat);
 void set_ele(Mat* A, int row, int col, fixed_type in_val);
 void show_mat(Mat* X);
+
+//  hasmap handy function
+int hash_map(int row, int col, int type);

@@ -1,20 +1,86 @@
-/*
- * Academic License - for use in teaching, academic research, and meeting
- * course requirements at degree granting institutions only.  Not for
- * government, commercial, or other organizational use.
- * File: randn.c
- *
- * MATLAB Coder version            : 5.2
- * C/C++ source code generated on  : 18-Sep-2021 23:05:32
- */
+//
+// Academic License - for use in teaching, academic research, and meeting
+// course requirements at degree granting institutions only.  Not for
+// government, commercial, or other organizational use.
+// File: RNG_withSeed.cpp
+//
+// MATLAB Coder version            : 5.4
+// C/C++ source code generated on  : 01-Sep-2023 10:45:31
+//
 
-/* Include Files */
+// Include Files
+#include "RNG_withSeed.h"
 #include <math.h>
 #include <string.h>
-#include "randn.h"
-#define n_col 1
 
-double eml_rand_shr3cong(unsigned int e_state[2])
+// Variable Definitions
+static unsigned int method;
+
+static unsigned int state[625];
+
+static bool state_not_empty;
+
+static unsigned int b_method;
+
+static unsigned int b_state[2];
+
+static unsigned int c_state;
+
+static unsigned int d_state[2];
+
+static bool isInitialized_RNG_withSeed = false;
+
+// Function Declarations
+namespace coder {
+static void eml_rand_mt19937ar_stateful(unsigned int varargin_1);
+
+static double eml_rand_shr3cong(unsigned int e_state[2]);
+
+static void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2]);
+
+static double randn();
+
+} // namespace coder
+static void eml_rand_init();
+
+static void eml_rand_mcg16807_stateful_init();
+
+static void eml_rand_shr3cong_stateful_init();
+
+static void eml_randn_init();
+
+// Function Definitions
+//
+// Arguments    : unsigned int varargin_1
+// Return Type  : void
+//
+namespace coder {
+static void eml_rand_mt19937ar_stateful(unsigned int varargin_1)
+{
+  unsigned int r;
+  if (!state_not_empty) {
+    memset(&state[0], 0, 625U * sizeof(unsigned int));
+    r = 5489U;
+    for (int mti = 0; mti < 623; mti++) {
+      r = ((r ^ r >> 30U) * 1812433253U + mti) + 1U;
+      state[mti + 1] = r;
+    }
+    state_not_empty = true;
+  }
+  r = varargin_1;
+  state[0] = varargin_1;
+  for (int mti = 0; mti < 623; mti++) {
+    r = ((r ^ r >> 30U) * 1812433253U + mti) + 1U;
+    state[mti + 1] = r;
+  }
+  state[624] = 624U;
+}
+
+//
+// Arguments    : unsigned int e_state[2]
+// Return Type  : double
+//
+static double eml_rand_shr3cong(unsigned int e_state[2])
 {
   static const double dv[65] = {
       0.340945,  0.4573146, 0.5397793, 0.6062427, 0.6631691, 0.7136975,
@@ -29,7 +95,6 @@ double eml_rand_shr3cong(unsigned int e_state[2])
       2.2725186, 2.3239338, 2.3795008, 2.4402218, 2.5075117, 2.5834658,
       2.6713916, 2.7769942, 2.7769942, 2.7769942, 2.7769942};
   double r;
-  double s;
   double x;
   double y;
   unsigned int icng;
@@ -41,17 +106,21 @@ double eml_rand_shr3cong(unsigned int e_state[2])
   jsr ^= jsr >> 17;
   jsr ^= jsr << 5;
   ui = icng + jsr;
-  j = (int)((ui & 63U) + 1U);
-  r = (double)(int)ui * 4.6566128730773926E-10 * dv[j];
+  j = static_cast<int>((ui & 63U) + 1U);
+  r = static_cast<double>(static_cast<int>(ui)) * 4.6566128730773926E-10 *
+      dv[j];
   x = fabs(r);
   y = dv[j - 1];
   if (!(x <= y)) {
+    double s;
     x = (x - y) / (dv[j] - y);
     icng = 69069U * icng + 1234567U;
     jsr ^= jsr << 13;
     jsr ^= jsr >> 17;
     jsr ^= jsr << 5;
-    y = (double)(int)(icng + jsr) * 2.328306436538696E-10 + 0.5;
+    y = static_cast<double>(static_cast<int>(icng + jsr)) *
+            2.328306436538696E-10 +
+        0.5;
     s = x + y;
     if (s > 1.301198) {
       if (r < 0.0) {
@@ -74,15 +143,18 @@ double eml_rand_shr3cong(unsigned int e_state[2])
           jsr ^= jsr << 13;
           jsr ^= jsr >> 17;
           jsr ^= jsr << 5;
-          x = log((double)(int)(icng + jsr) * 2.328306436538696E-10 + 0.5) /
+          x = log(static_cast<double>(static_cast<int>(icng + jsr)) *
+                      2.328306436538696E-10 +
+                  0.5) /
               2.776994;
           icng = 69069U * icng + 1234567U;
           jsr ^= jsr << 13;
           jsr ^= jsr >> 17;
           jsr ^= jsr << 5;
         } while (
-            !(-2.0 *
-                  log((double)(int)(icng + jsr) * 2.328306436538696E-10 + 0.5) >
+            !(-2.0 * log(static_cast<double>(static_cast<int>(icng + jsr)) *
+                             2.328306436538696E-10 +
+                         0.5) >
               x * x));
         if (r < 0.0) {
           r = x - 2.776994;
@@ -97,19 +169,20 @@ double eml_rand_shr3cong(unsigned int e_state[2])
   return r;
 }
 
-void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
+//
+// Arguments    : unsigned int mt[625]
+//                unsigned int u[2]
+// Return Type  : void
+//
+static void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
 {
-  int j;
-  int kk;
-  unsigned int mti;
-  unsigned int y;
-  unsigned int temp;
-  genrand_uint32_vector_label3:for (j = 0; j < 2; j++) {
+  for (int j = 0; j < 2; j++) {
+    unsigned int mti;
+    unsigned int y;
     mti = mt[624] + 1U;
     if (mti >= 625U) {
-      for (kk = 0; kk < 227; kk++) {
-        temp = (mt[kk] & 2147483648U);
-        y = temp | (mt[kk + 1] & 2147483647U);
+      for (int kk = 0; kk < 227; kk++) {
+        y = (mt[kk] & 2147483648U) | (mt[kk + 1] & 2147483647U);
         if ((y & 1U) == 0U) {
           y >>= 1U;
         } else {
@@ -117,9 +190,8 @@ void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
         }
         mt[kk] = mt[kk + 397] ^ y;
       }
-      for (kk = 0; kk < 396; kk++) {
-        temp = (mt[kk + 227] & 2147483648U);
-        y = temp | (mt[kk + 228] & 2147483647U);
+      for (int kk = 0; kk < 396; kk++) {
+        y = (mt[kk + 227] & 2147483648U) | (mt[kk + 228] & 2147483647U);
         if ((y & 1U) == 0U) {
           y >>= 1U;
         } else {
@@ -127,8 +199,7 @@ void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
         }
         mt[kk + 227] = mt[kk] ^ y;
       }
-      temp = (mt[623] & 2147483648U);
-      y = temp | (mt[0] & 2147483647U);
+      y = (mt[623] & 2147483648U) | (mt[0] & 2147483647U);
       if ((y & 1U) == 0U) {
         y >>= 1U;
       } else {
@@ -137,7 +208,7 @@ void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
       mt[623] = mt[396] ^ y;
       mti = 1U;
     }
-    y = mt[(int)mti - 1];
+    y = mt[static_cast<int>(mti) - 1];
     mt[624] = mti;
     y ^= y >> 11U;
     y ^= y << 7U & 2636928640U;
@@ -146,9 +217,12 @@ void genrand_uint32_vector(unsigned int mt[625], unsigned int u[2])
   }
 }
 
-void randn(double *r, int init_flag,int seed)
+//
+// Arguments    : void
+// Return Type  : double
+//
+static double randn()
 {
-  if(init_flag) rand_init(seed);
   static const double dv[257] = {0.0,
                                  0.215241895984875,
                                  0.286174591792068,
@@ -663,49 +737,42 @@ void randn(double *r, int init_flag,int seed)
                                   0.00260907274610216,
                                   0.0012602859304986,
                                   0.000477467764609386};
-  double c_r;
-  double t;
-  double x;
-  unsigned int u[2];
-  unsigned int a;
-  unsigned int b;
-  unsigned int b_r;
-  unsigned int e_state;
-  int exitg1;
-  int hi;
-  int k;
+  double r;
   if (b_method == 0U) {
     if (method == 4U) {
-      randn_label0:for (k = 0; k < n_col; k++) {
-        do {
-          hi = (int)(c_state / 127773U);
-          a = 16807U * (c_state - hi * 127773U);
-          b = 2836U * hi;
-          if (a < b) {
-            b_r = ~(b - a) & 2147483647U;
-          } else {
-            b_r = a - b;
-          }
-          hi = (int)(b_r / 127773U);
-          a = 16807U * (b_r - hi * 127773U);
-          b = 2836U * hi;
-          if (a < b) {
-            c_state = ~(b - a) & 2147483647U;
-          } else {
-            c_state = a - b;
-          }
-          c_r = 2.0 * ((double)b_r * 4.6566128752457969E-10) - 1.0;
-          t = 2.0 * ((double)c_state * 4.6566128752457969E-10) - 1.0;
-          t = t * t + c_r * c_r;
-        } while (!(t <= 1.0));
-        r[k] = c_r * sqrt(-2.0 * log(t) / t);
-      }
+      double t;
+      unsigned int a;
+      unsigned int b;
+      int hi;
+      do {
+        unsigned int b_r;
+        hi = static_cast<int>(c_state / 127773U);
+        a = 16807U * (c_state - hi * 127773U);
+        b = 2836U * hi;
+        if (a < b) {
+          b_r = ~(b - a) & 2147483647U;
+        } else {
+          b_r = a - b;
+        }
+        hi = static_cast<int>(b_r / 127773U);
+        a = 16807U * (b_r - hi * 127773U);
+        b = 2836U * hi;
+        if (a < b) {
+          c_state = ~(b - a) & 2147483647U;
+        } else {
+          c_state = a - b;
+        }
+        r = 2.0 * (static_cast<double>(b_r) * 4.6566128752457969E-10) - 1.0;
+        t = 2.0 * (static_cast<double>(c_state) * 4.6566128752457969E-10) - 1.0;
+        t = t * t + r * r;
+      } while (!(t <= 1.0));
+      r *= sqrt(-2.0 * log(t) / t);
     } else if (method == 5U) {
-      randn_label1:for (k = 0; k < n_col; k++) {
-    	  r[k] = eml_rand_shr3cong(d_state);
-      }
+      r = eml_rand_shr3cong(d_state);
     } else {
+      int hi;
       if (!state_not_empty) {
+        unsigned int b_r;
         memset(&state[0], 0, 625U * sizeof(unsigned int));
         b_r = 5489U;
         state[0] = 5489U;
@@ -716,283 +783,338 @@ void randn(double *r, int init_flag,int seed)
         state[624] = 624U;
         state_not_empty = true;
       }
-      randn_label2:for (k = 0; k < n_col; k++) {
-        do {
-          exitg1 = 0;
-          genrand_uint32_vector(state, u);
-          hi = (int)((u[1] >> 24U) + 1U);
-          c_r = (((double)(u[0] >> 3U) * 1.6777216E+7 +
-                  (double)((int)u[1] & 16777215)) *
-                     2.2204460492503131E-16 -
-                 1.0) *
-                dv[hi];
-          if (fabs(c_r) <= dv[hi - 1]) {
+      unsigned int u[2];
+      int exitg1;
+      do {
+        exitg1 = 0;
+        genrand_uint32_vector(state, u);
+        hi = static_cast<int>((u[1] >> 24U) + 1U);
+        r = ((static_cast<double>(u[0] >> 3U) * 1.6777216E+7 +
+              static_cast<double>(static_cast<int>(u[1]) & 16777215)) *
+                 2.2204460492503131E-16 -
+             1.0) *
+            dv[hi];
+        if (fabs(r) <= dv[hi - 1]) {
+          exitg1 = 1;
+        } else if (hi < 256) {
+          double t;
+          // ========================= COPYRIGHT NOTICE
+          // ============================
+          //  This is a uniform (0,1) pseudorandom number generator based on:
+          //
+          //  A C-program for MT19937, with initialization improved 2002/1/26.
+          //  Coded by Takuji Nishimura and Makoto Matsumoto.
+          //
+          //  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+          //  All rights reserved.
+          //
+          //  Redistribution and use in source and binary forms, with or without
+          //  modification, are permitted provided that the following conditions
+          //  are met:
+          //
+          //    1. Redistributions of source code must retain the above
+          //    copyright
+          //       notice, this list of conditions and the following disclaimer.
+          //
+          //    2. Redistributions in binary form must reproduce the above
+          //    copyright
+          //       notice, this list of conditions and the following disclaimer
+          //       in the documentation and/or other materials provided with the
+          //       distribution.
+          //
+          //    3. The names of its contributors may not be used to endorse or
+          //       promote products derived from this software without specific
+          //       prior written permission.
+          //
+          //  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+          //  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+          //  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+          //  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+          //  DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+          //  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+          //  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+          //  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+          //  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+          //  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+          //  TORT (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+          //  OF THE USE OF THIS  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+          //  OF SUCH DAMAGE.
+          //
+          // =============================   END
+          // =================================
+          do {
+            genrand_uint32_vector(state, u);
+            u[0] >>= 5U;
+            u[1] >>= 6U;
+            t = 1.1102230246251565E-16 *
+                (static_cast<double>(u[0]) * 6.7108864E+7 +
+                 static_cast<double>(u[1]));
+          } while (t == 0.0);
+          if (dv1[hi] + t * (dv1[hi - 1] - dv1[hi]) < exp(-0.5 * r * r)) {
             exitg1 = 1;
-          } else if (hi < 256) {
-            /* ========================= COPYRIGHT NOTICE
-             * ============================ */
-            /*  This is a uniform (0,1) pseudorandom number generator based on:
-             */
-            /*                                                                         */
-            /*  A C-program for MT19937, with initialization improved 2002/1/26.
-             */
-            /*  Coded by Takuji Nishimura and Makoto Matsumoto. */
-            /*                                                                         */
-            /*  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji
-             * Nishimura,      */
-            /*  All rights reserved. */
-            /*                                                                         */
-            /*  Redistribution and use in source and binary forms, with or
-             * without     */
-            /*  modification, are permitted provided that the following
-             * conditions     */
-            /*  are met: */
-            /*                                                                         */
-            /*    1. Redistributions of source code must retain the above
-             * copyright    */
-            /*       notice, this list of conditions and the following
-             * disclaimer.     */
-            /*                                                                         */
-            /*    2. Redistributions in binary form must reproduce the above
-             * copyright */
-            /*       notice, this list of conditions and the following
-             * disclaimer      */
-            /*       in the documentation and/or other materials provided with
-             * the     */
-            /*       distribution. */
-            /*                                                                         */
-            /*    3. The names of its contributors may not be used to endorse or
-             */
-            /*       promote products derived from this software without
-             * specific      */
-            /*       prior written permission. */
-            /*                                                                         */
-            /*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-             * CONTRIBUTORS    */
-            /*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
-             * NOT      */
-            /*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-             * FITNESS FOR  */
-            /*  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
-             * COPYRIGHT  */
-            /*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-             * INCIDENTAL,  */
-            /*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-             */
-            /*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-             * USE,  */
-            /*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-             * ON ANY  */
-            /*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-             * TORT    */
-            /*  (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-             * THE USE */
-            /*  OF THIS  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-             * DAMAGE.  */
-            /*                                                                         */
-            /* =============================   END
-             * ================================= */
+          }
+        } else {
+          double t;
+          double x;
+          do {
+            // ========================= COPYRIGHT NOTICE
+            // ============================
+            //  This is a uniform (0,1) pseudorandom number generator based on:
+            //
+            //  A C-program for MT19937, with initialization improved 2002/1/26.
+            //  Coded by Takuji Nishimura and Makoto Matsumoto.
+            //
+            //  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji
+            //  Nishimura, All rights reserved.
+            //
+            //  Redistribution and use in source and binary forms, with or
+            //  without modification, are permitted provided that the following
+            //  conditions are met:
+            //
+            //    1. Redistributions of source code must retain the above
+            //    copyright
+            //       notice, this list of conditions and the following
+            //       disclaimer.
+            //
+            //    2. Redistributions in binary form must reproduce the above
+            //    copyright
+            //       notice, this list of conditions and the following
+            //       disclaimer in the documentation and/or other materials
+            //       provided with the distribution.
+            //
+            //    3. The names of its contributors may not be used to endorse or
+            //       promote products derived from this software without
+            //       specific prior written permission.
+            //
+            //  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+            //  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+            //  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+            //  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+            //  DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+            //  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+            //  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+            //  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+            //  USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+            //  AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+            //  LIABILITY, OR TORT (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING
+            //  IN ANY WAY OUT OF THE USE OF THIS  SOFTWARE, EVEN IF ADVISED OF
+            //  THE POSSIBILITY OF SUCH DAMAGE.
+            //
+            // =============================   END
+            // =================================
             do {
               genrand_uint32_vector(state, u);
               u[0] >>= 5U;
               u[1] >>= 6U;
               t = 1.1102230246251565E-16 *
-                  ((double)u[0] * 6.7108864E+7 + (double)u[1]);
+                  (static_cast<double>(u[0]) * 6.7108864E+7 +
+                   static_cast<double>(u[1]));
             } while (t == 0.0);
-            if (dv1[hi] + t * (dv1[hi - 1] - dv1[hi]) < exp(-0.5 * c_r * c_r)) {
-              exitg1 = 1;
-            }
-          } else {
+            x = log(t) * 0.273661237329758;
+            // ========================= COPYRIGHT NOTICE
+            // ============================
+            //  This is a uniform (0,1) pseudorandom number generator based on:
+            //
+            //  A C-program for MT19937, with initialization improved 2002/1/26.
+            //  Coded by Takuji Nishimura and Makoto Matsumoto.
+            //
+            //  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji
+            //  Nishimura, All rights reserved.
+            //
+            //  Redistribution and use in source and binary forms, with or
+            //  without modification, are permitted provided that the following
+            //  conditions are met:
+            //
+            //    1. Redistributions of source code must retain the above
+            //    copyright
+            //       notice, this list of conditions and the following
+            //       disclaimer.
+            //
+            //    2. Redistributions in binary form must reproduce the above
+            //    copyright
+            //       notice, this list of conditions and the following
+            //       disclaimer in the documentation and/or other materials
+            //       provided with the distribution.
+            //
+            //    3. The names of its contributors may not be used to endorse or
+            //       promote products derived from this software without
+            //       specific prior written permission.
+            //
+            //  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+            //  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+            //  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+            //  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+            //  DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+            //  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+            //  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+            //  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+            //  USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+            //  AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+            //  LIABILITY, OR TORT (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING
+            //  IN ANY WAY OUT OF THE USE OF THIS  SOFTWARE, EVEN IF ADVISED OF
+            //  THE POSSIBILITY OF SUCH DAMAGE.
+            //
+            // =============================   END
+            // =================================
             do {
-              /* ========================= COPYRIGHT NOTICE
-               * ============================ */
-              /*  This is a uniform (0,1) pseudorandom number generator based
-               * on:        */
-              /*                                                                         */
-              /*  A C-program for MT19937, with initialization improved
-               * 2002/1/26.       */
-              /*  Coded by Takuji Nishimura and Makoto Matsumoto. */
-              /*                                                                         */
-              /*  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji
-               * Nishimura,      */
-              /*  All rights reserved. */
-              /*                                                                         */
-              /*  Redistribution and use in source and binary forms, with or
-               * without     */
-              /*  modification, are permitted provided that the following
-               * conditions     */
-              /*  are met: */
-              /*                                                                         */
-              /*    1. Redistributions of source code must retain the above
-               * copyright    */
-              /*       notice, this list of conditions and the following
-               * disclaimer.     */
-              /*                                                                         */
-              /*    2. Redistributions in binary form must reproduce the above
-               * copyright */
-              /*       notice, this list of conditions and the following
-               * disclaimer      */
-              /*       in the documentation and/or other materials provided with
-               * the     */
-              /*       distribution. */
-              /*                                                                         */
-              /*    3. The names of its contributors may not be used to endorse
-               * or       */
-              /*       promote products derived from this software without
-               * specific      */
-              /*       prior written permission. */
-              /*                                                                         */
-              /*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-               * CONTRIBUTORS    */
-              /*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
-               * NOT      */
-              /*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-               * FITNESS FOR  */
-              /*  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
-               * COPYRIGHT  */
-              /*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-               * INCIDENTAL,  */
-              /*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-               * NOT       */
-              /*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-               * OF USE,  */
-              /*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-               * ON ANY  */
-              /*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-               * TORT    */
-              /*  (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-               * THE USE */
-              /*  OF THIS  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-               * DAMAGE.  */
-              /*                                                                         */
-              /* =============================   END
-               * ================================= */
-              do {
-                genrand_uint32_vector(state, u);
-                u[0] >>= 5U;
-                u[1] >>= 6U;
-                t = 1.1102230246251565E-16 *
-                    ((double)u[0] * 6.7108864E+7 + (double)u[1]);
-              } while (t == 0.0);
-              x = log(t) * 0.273661237329758;
-              /* ========================= COPYRIGHT NOTICE
-               * ============================ */
-              /*  This is a uniform (0,1) pseudorandom number generator based
-               * on:        */
-              /*                                                                         */
-              /*  A C-program for MT19937, with initialization improved
-               * 2002/1/26.       */
-              /*  Coded by Takuji Nishimura and Makoto Matsumoto. */
-              /*                                                                         */
-              /*  Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji
-               * Nishimura,      */
-              /*  All rights reserved. */
-              /*                                                                         */
-              /*  Redistribution and use in source and binary forms, with or
-               * without     */
-              /*  modification, are permitted provided that the following
-               * conditions     */
-              /*  are met: */
-              /*                                                                         */
-              /*    1. Redistributions of source code must retain the above
-               * copyright    */
-              /*       notice, this list of conditions and the following
-               * disclaimer.     */
-              /*                                                                         */
-              /*    2. Redistributions in binary form must reproduce the above
-               * copyright */
-              /*       notice, this list of conditions and the following
-               * disclaimer      */
-              /*       in the documentation and/or other materials provided with
-               * the     */
-              /*       distribution. */
-              /*                                                                         */
-              /*    3. The names of its contributors may not be used to endorse
-               * or       */
-              /*       promote products derived from this software without
-               * specific      */
-              /*       prior written permission. */
-              /*                                                                         */
-              /*  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-               * CONTRIBUTORS    */
-              /*  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT
-               * NOT      */
-              /*  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-               * FITNESS FOR  */
-              /*  A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE
-               * COPYRIGHT  */
-              /*  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-               * INCIDENTAL,  */
-              /*  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-               * NOT       */
-              /*  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-               * OF USE,  */
-              /*  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-               * ON ANY  */
-              /*  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-               * TORT    */
-              /*  (INCLUDING  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-               * THE USE */
-              /*  OF THIS  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-               * DAMAGE.  */
-              /*                                                                         */
-              /* =============================   END
-               * ================================= */
-              do {
-                genrand_uint32_vector(state, u);
-                u[0] >>= 5U;
-                u[1] >>= 6U;
-                t = 1.1102230246251565E-16 *
-                    ((double)u[0] * 6.7108864E+7 + (double)u[1]);
-              } while (t == 0.0);
-            } while (!(-2.0 * log(t) > x * x));
-            if (c_r < 0.0) {
-              c_r = x - 3.65415288536101;
-            } else {
-              c_r = 3.65415288536101 - x;
-            }
-            exitg1 = 1;
+              genrand_uint32_vector(state, u);
+              u[0] >>= 5U;
+              u[1] >>= 6U;
+              t = 1.1102230246251565E-16 *
+                  (static_cast<double>(u[0]) * 6.7108864E+7 +
+                   static_cast<double>(u[1]));
+            } while (t == 0.0);
+          } while (!(-2.0 * log(t) > x * x));
+          if (r < 0.0) {
+            r = x - 3.65415288536101;
+          } else {
+            r = 3.65415288536101 - x;
           }
-        } while (exitg1 == 0);
-        r[k] = c_r;
-      }
+          exitg1 = 1;
+        }
+      } while (exitg1 == 0);
     }
   } else if (b_method == 4U) {
-    for (k = 0; k < n_col; k++) {
-      b_r = b_state[0];
-      do {
-        hi = (int)(b_r / 127773U);
-        a = 16807U * (b_r - hi * 127773U);
-        b = 2836U * hi;
-        if (a < b) {
-          e_state = ~(b - a) & 2147483647U;
-        } else {
-          e_state = a - b;
-        }
-        hi = (int)(e_state / 127773U);
-        a = 16807U * (e_state - hi * 127773U);
-        b = 2836U * hi;
-        if (a < b) {
-          b_r = ~(b - a) & 2147483647U;
-        } else {
-          b_r = a - b;
-        }
-        c_r = 2.0 * ((double)e_state * 4.6566128752457969E-10) - 1.0;
-        t = 2.0 * ((double)b_r * 4.6566128752457969E-10) - 1.0;
-        t = t * t + c_r * c_r;
-      } while (!(t <= 1.0));
-      r[k] = c_r * sqrt(-2.0 * log(t) / t);
-      b_state[0] = b_r;
-    }
+    double t;
+    unsigned int b_r;
+    b_r = b_state[0];
+    unsigned int a;
+    unsigned int b;
+    int hi;
+    do {
+      unsigned int e_state;
+      hi = static_cast<int>(b_r / 127773U);
+      a = 16807U * (b_r - hi * 127773U);
+      b = 2836U * hi;
+      if (a < b) {
+        e_state = ~(b - a) & 2147483647U;
+      } else {
+        e_state = a - b;
+      }
+      hi = static_cast<int>(e_state / 127773U);
+      a = 16807U * (e_state - hi * 127773U);
+      b = 2836U * hi;
+      if (a < b) {
+        b_r = ~(b - a) & 2147483647U;
+      } else {
+        b_r = a - b;
+      }
+      r = 2.0 * (static_cast<double>(e_state) * 4.6566128752457969E-10) - 1.0;
+      t = 2.0 * (static_cast<double>(b_r) * 4.6566128752457969E-10) - 1.0;
+      t = t * t + r * r;
+    } while (!(t <= 1.0));
+    r *= sqrt(-2.0 * log(t) / t);
+    b_state[0] = b_r;
   } else {
-    for (k = 0; k < n_col; k++) {
-    	r[k] = eml_rand_shr3cong(b_state);
-    }
+    r = eml_rand_shr3cong(b_state);
   }
+  return r;
 }
 
-/*
- * File trailer for randn.c
- *
- * [EOF]
- */
+//
+// Arguments    : void
+// Return Type  : void
+//
+} // namespace coder
+static void eml_rand_init()
+{
+  method = 7U;
+}
+
+//
+// Arguments    : void
+// Return Type  : void
+//
+static void eml_rand_mcg16807_stateful_init()
+{
+  c_state = 1144108930U;
+}
+
+//
+// Arguments    : void
+// Return Type  : void
+//
+static void eml_rand_shr3cong_stateful_init()
+{
+  d_state[0] = 362436069U;
+  d_state[1] = 521288629U;
+}
+
+//
+// Arguments    : void
+// Return Type  : void
+//
+static void eml_randn_init()
+{
+  b_method = 0U;
+  b_state[0] = 362436069U;
+  b_state[1] = 521288629U;
+}
+
+//
+// function y = RNG_withSeed(init, seed_in)
+//
+// Arguments    : double init
+//                double seed_in
+// Return Type  : double
+//
+double RNG_withSeed(double init, double seed_in)
+{
+  if (!isInitialized_RNG_withSeed) {
+    RNG_withSeed_initialize();
+  }
+  // 'RNG_withSeed:2' if(init == 1)
+  if (init == 1.0) {
+    unsigned int seed;
+    // 'RNG_withSeed:3' rng(seed_in,'twister')
+    if (seed_in < 4.294967296E+9) {
+      if (seed_in >= 0.0) {
+        seed = static_cast<unsigned int>(seed_in);
+      } else {
+        seed = 0U;
+      }
+    } else if (seed_in >= 4.294967296E+9) {
+      seed = MAX_uint32_T;
+    } else {
+      seed = 0U;
+    }
+    method = 7U;
+    if (seed == 0U) {
+      seed = 5489U;
+    }
+    coder::eml_rand_mt19937ar_stateful(seed);
+    b_method = 0U;
+    coder::eml_rand_mt19937ar_stateful(seed);
+  }
+  // 'RNG_withSeed:5' y = randn([1 1]);
+  return coder::randn();
+}
+
+//
+// Arguments    : void
+// Return Type  : void
+//
+void RNG_withSeed_initialize()
+{
+  state_not_empty = false;
+  eml_rand_init();
+  eml_randn_init();
+  eml_rand_mcg16807_stateful_init();
+  eml_rand_shr3cong_stateful_init();
+  isInitialized_RNG_withSeed = true;
+}
+
+//
+// Arguments    : void
+// Return Type  : void
+//
+void RNG_withSeed_terminate()
+{
+  isInitialized_RNG_withSeed = false;
+}
+
+//
+// File trailer for RNG_withSeed.cpp
+//
+// [EOF]
+//

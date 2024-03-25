@@ -1,238 +1,213 @@
 #include "Calweights.h"
-#define LOOP_FACTOR 32
-void Calweights(fixed_type wt[NUM_PARTICLES], Mat* particle, Mat_S* obsVals,int index)
+//#include "lib/read_write_csv.h"
+
+#define LOOP_FACTOR 1
+
+// this function is used to copy a particle's vector into two vector.
+// Those two generated vectors are used to calculate the estimated meas.
+// This function is designed particularly for Dataflow, avoiding single-producer-consumer violations
+void duplicate_data(Mat* in, int sel, Mat_S* out1, Mat_S* out2)
 {
-	Mat_S temp_cal;
-	init_mat(&temp_cal,NUM_VAR,NUM_VAR);
+#pragma HLS inline off
 
-	Mat_S temp_X;
-	init_mat(&temp_X,NUM_VAR,1);
-
-	Mat_S temp_X2;
-	init_mat(&temp_X2,NUM_VAR,1);
-
-	Mat_S temp_X3;
-	init_mat(&temp_X3,1,NUM_VAR);
-
-	Mat_S Pxx_;
-	mean_X_and_Pxx(particle,&Pxx_);
-//	cout<< "Pxx_:";
-//	showmat_S(&Pxx_);
-	msmt msmtinfo = msmt_prcs(obsVals);
-//	showmat_S(&msmtinfo.z);
-//	printf("Begin\n");
-	// reuse resources
-	// tempX2 is Hxx, tempX3 is z_cap
-	init_mat(&temp_X2,SN_NUM*2,NUM_VAR);
-	init_mat(&temp_X3,SN_NUM*2,1);
-	fixed_type sum = 0.0;
-	likelihood:for(int j =0; j < NUM_PARTICLES;j++)
+	for(int i0 = 0; i0 < NUM_VAR;i0++)
 	{
-		getColMat_L2S(particle,j,&temp_X);
-//		printf("sth\n");
-
-//		show_mat(particle);
-		temp_X2 = ObsJacobian(&temp_X,index,&msmtinfo);
-//		cout<< "ObsJacobian:";
-//		showmat_S(&temp_X2);
-		temp_X3 = GISobs_model(&temp_X,index,&msmtinfo);
-//		cout<< "GISobs_model:";
-//		showmat_S(&temp_X3);
-		fixed_type pzx = GISPzx(&msmtinfo,&Pxx_,&temp_X2,&temp_X3);
-		double pzx_du;
-		pzx_du = pzx;
-//		printf("%f_%d\t",pzx_du,j);
-
-//		std::string fol_dir = "/home/rick/Desktop/git/ESP_PF_VitisSource/ESP_PF_NoHierarchy/Data";
-//		write_csv(Save_Path(fol_dir,"ObsJacobian",NUM_PARTICLES),convert_double(temp_X2.entries,6,NUM_VAR),6,NUM_VAR);
-//		write_csv(Save_Path(fol_dir,"GISobs_model",NUM_PARTICLES),convert_double(temp_X3.entries,6,1),6,1);
-		wt[j] = wt[j]*pzx;
-		sum += wt[j];
+#pragma HLS pipeline
+		out1->entries[i0*NUM_VAR] = in->entries[i0*NUM_PARTICLES+sel];
+		out2->entries[i0*NUM_VAR] = in->entries[i0*NUM_PARTICLES+sel];
 	}
-	cout << "\n";
-	// normalized weights
-	for(int i =0; i < NUM_PARTICLES;i++)
+	out1->col = 1;
+	out1->row = NUM_VAR;
+	out2->col = 1;
+	out2->row = NUM_VAR;
+}
+void copy_result(	fixed_type pzx_fp[SN_NUM*2][SN_NUM*2],
+					fixed_type zDiff_fp[SN_NUM*2],
+					int j,
+					fixed_type zDiff[NUM_PARTICLES*SN_NUM*2],
+					fixed_type pzx[NUM_PARTICLES*SN_NUM*2*SN_NUM*2])
+{
+#pragma HLS inline off
+	for(int i =0; i < SN_NUM*2;i++)
 	{
-		wt[i] = wt[i]/sum;
-//		cout << wt[i] << "\t";
+		zDiff[j*N_MEAS+i] = zDiff_fp[i];
+		for(int k =0; k < SN_NUM*2;k++)
+		{
+			pzx[j*SN_NUM*2*SN_NUM*2+ i*SN_NUM*2+ k] = pzx_fp[i][k];
+		}
 	}
-
 }
 
-void mean_X_and_Pxx(Mat* prtcls, Mat_S* Pxx_)
+extern "C"{
+void CalPzxZdiff(fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
+				msmt* msmtinfo,
+				fixed_type R_mat[N_MEAS],
+				int index,
+				fixed_type Pxx_[NUM_VAR*NUM_VAR],
+				fixed_type zDiff[NUM_PARTICLES*N_MEAS],
+				fixed_type pzx[NUM_PARTICLES*N_MEAS*N_MEAS])
 {
-#pragma HLS PIPELINE off
-	Mat_S X_avg;
-	X_avg.row = NUM_VAR;
-	X_avg.col = 1;
+#pragma HLS STREAM variable=prtcls
+#pragma HLS STREAM variable=msmtinfo
+#pragma HLS STREAM variable=R_mat
+#pragma HLS STREAM variable=Pxx_
+#pragma HLS STREAM variable=zDiff
+#pragma HLS STREAM variable=pzx
 
-	Pxx_->row = NUM_VAR;
-	Pxx_->col = NUM_VAR;
-	size_t nvar_size = NUM_VAR*NUM_VAR*sizeof(fixed_type);
-//	show_mat(prtcls);
-//	Init_X:for(int i =0; i < NUM_VAR;i++)
+#pragma HLS INTERFACE mode=m_axi bundle=gmem3 port=pzx offset=slave
+#pragma HLS INTERFACE mode=m_axi bundle=gmem2 port=zDiff offset=slave
+
+//#pragma HLS INTERFACE mode=m_axi bundle=gmem1 port=R_mat num_write_outstanding=1 max_read_burst_length=2 offset=slave
+//#pragma HLS INTERFACE mode=m_axi bundle=gmem2 port=Pxx_ num_write_outstanding=1 num_write_outstanding=2 offset=slave
+#pragma HLS INTERFACE mode=m_axi bundle=gmem1 port=msmtinfo offset=slave
+#pragma HLS INTERFACE mode=m_axi bundle=gmem0 port=prtcls num_write_outstanding=1 num_write_outstanding=2 offset=slave
 //
+//
+//#pragma HLS STABLE variable=index
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=return
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=msmtinfo
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=R_mat
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=prtcls
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=index
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=Pxx_
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=zDiff
+#pragma HLS INTERFACE mode=s_axilite bundle=control_r port=pzx
+
+//#pragma HLS inline off
+
+
+	fixed_type zDiff_local[NUM_PARTICLES*N_MEAS];
+	fixed_type pzx_local[NUM_PARTICLES*N_MEAS*N_MEAS];
+	fixed_type pxx_local1[NUM_VAR][NUM_VAR];
+	Mat prtcls_local;
+	Mat_S R_local;
+	msmt msmtinfo1,msmtinfo2,msmtinfo3;
+
+	load_data(Pxx_,prtcls,R_mat,msmtinfo,pxx_local1,&prtcls_local,&R_local,&msmtinfo1,&msmtinfo2,&msmtinfo3);
+	int nobs1 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
+	int nobs2 =  msmtinfo1.n_aoa +  msmtinfo1.n_tdoa;
+
+//	likelihood1:for(int j =0; j < NUM_PARTICLES/LOOP_FACTOR;j++)
+	likelihood:for(int j =0; j <  NUM_PARTICLES/LOOP_FACTOR;j++)
+	{
+		// reuse resources
+		// tempX2 is Hxx, tempX3 is z_cap
+#pragma HLS DATAFLOW
+		Mat_S temp_X;	// particle column
+		fixed_type obsJacobian[N_MEAS][NUM_VAR];
+		fixed_type GISobs[N_MEAS];
+		Mat_S temp_X4;	// particles column
+
+		int idx1 = index;
+		int idx2 = index;
+
+		int j1 = j;
+		int j2 = j;
+		int j3 = j;
+		int j4 = j;
+
+
+
+		// duplicate data for further single-producer-consumer violation
+		duplicate_data(&prtcls_local,j1,&temp_X,&temp_X4);
+
+//		Calculate the estimated measurement based on the given particles
+		ObsJacobian(&temp_X,idx1,&msmtinfo1,obsJacobian);
+		GISobs_model(&temp_X4,idx2,&msmtinfo2,GISobs);
+
+
+		GISPzx3(obsJacobian,pxx_local1,&R_local,pzx_local,nobs1,j3);
+		zDiff_cal(GISobs,&msmtinfo3,zDiff_local,nobs2,j4);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/ObsJacobian_COV.csv",convert_double(temp_X2.entries,1,13*6,0),6,13);
+//		write_csv("C:/ESP_PF_PLNewWeight/ESP_GSIPv3/result/GISobs_model_COV.csv",convert_double(temp_X3.entries,6,1,0),1,6);
+
+	}
+	store_data(zDiff_local, pzx_local, zDiff,pzx);
+
+}
+}
+
+void load_data(fixed_type pxx[NUM_VAR*NUM_VAR],
+				fixed_type prtcls [NUM_VAR*NUM_PARTICLES],
+				fixed_type R [N_MEAS],
+				msmt* msmtinfo,
+				fixed_type pxx_Out1[NUM_VAR][NUM_VAR],
+				Mat* prtcls_temp,
+				Mat_S* R_out,
+				msmt* msmtinfo1,
+				msmt* msmtinfo2,
+				msmt* msmtinfo3)
+{
+
+#pragma HLS PIPELINE off
+
+	pxx_cp:for(int i=0; i < NUM_VAR*NUM_VAR;i++){
+//#pragma HLS UNROLL
+		int idx= i/13;
+		int jdx= i%13;
+		pxx_Out1[idx][jdx] = pxx[i];
+	}
+
+	R_cp:for(int i=0; i < N_MEAS;i++)
+	{
+//#pragma HLS UNROLL
+		R_out->entries[i*NUM_VAR+i] = R[i];
+	}
+
+	prtcls_cp:for(int i=0; i < NUM_VAR*NUM_PARTICLES;i++)
+	{
 //#pragma HLS PIPELINE
-//X_avg.entries[i*NUM_VAR] = 0;
-	memset(X_avg.entries, 0, nvar_size);
-
-	// X_avg[i<2] = Sum(X[i<2]/1024)
-	state_avg0:for(int i0 =0; i0 < 2*NUM_PARTICLES;i0+=NUM_PARTICLES)
-	{
-		fixed_type sum = 0;
-		fixed_type sum_0 = 0;
-		state_avg02:for(int i1 =0; i1 < NUM_PARTICLES; i1+=LOOP_FACTOR)
-		{
-			sum_0 = sum;
-			state_avg03_add:for(int i2 =0; i2 < LOOP_FACTOR; i2++)
-			{
-#pragma HLS PIPELINE II=2
-#pragma HLS UNROLL factor=4
-						fixed_type temp = sum_0;
-						sum_0 = temp +  prtcls->entries[i0+i1+i2]/(NUM_PARTICLES);
-//						cout << sum_0 <<"\t";
-			}
-			sum = sum_0;
-		}
-		int step = i0/NUM_PARTICLES*NUM_VAR;
-		X_avg.entries[step] = sum;
+//#pragma HLS UNROLL
+		prtcls_temp->entries[i]=prtcls[i];
 	}
+	prtcls_temp->col = NUM_PARTICLES;
+	prtcls_temp->row = NUM_VAR;
 
-	// X_avg[i>=2] = Sum(X[i>=2])/1024
-	state_avg1:for(int i0 =2*NUM_PARTICLES; i0 < NUM_VAR*NUM_PARTICLES;i0+=NUM_PARTICLES)
-	{
-		fixed_type sum = 0;
-		fixed_type sum_0 = 0;
-		state_avg12:for(int i1 =0; i1 < NUM_PARTICLES; i1+=LOOP_FACTOR)
-		{
-			sum_0 = sum;
-			state_avg13_add:for(int i2 =0; i2 < LOOP_FACTOR; i2++)
-			{
-#pragma HLS PIPELINE II=2
-#pragma HLS UNROLL factor=4
-						fixed_type temp = sum_0;
-						sum_0 = temp +  prtcls->entries[i0+i1+i2] ;
-			}
-			sum = sum_0;
-		}
-		int step = i0/NUM_PARTICLES*NUM_VAR;
-		X_avg.entries[step] = sum/NUM_PARTICLES;
+
+	// cpy msmtinfo
+	msmt:for(int i=0; i < N_MEAS;i++){
+//#pragma HLS UNROLL
+
+		msmtinfo1->validIdx[i] = msmtinfo->validIdx[i];
+		msmtinfo1->z[i] = msmtinfo->z[i];
 	}
-//	cout << "X_avg:\n";
-//	showmat_S(&X_avg);
-	avg_cal(prtcls, &X_avg, Pxx_);
-	cout << "Pxx_:\n";
-	showmat_S(Pxx_);
+	msmtinfo1->n_aoa = msmtinfo->n_aoa;
+	msmtinfo1->n_tdoa = msmtinfo->n_tdoa;
+
+	msmt2:for(int i=0; i < N_MEAS;i++){
+//#pragma HLS UNROLL
+
+		msmtinfo2->z[i] = msmtinfo1->z[i];
+		msmtinfo3->z[i] = msmtinfo1->z[i];
+		msmtinfo2->validIdx[i] = msmtinfo1->validIdx[i];
+		msmtinfo3->validIdx[i] = msmtinfo1->validIdx[i];
+	}
+	msmtinfo2->n_aoa = msmtinfo1->n_aoa;
+	msmtinfo2->n_tdoa = msmtinfo1->n_tdoa;
+	msmtinfo3->n_aoa = msmtinfo1->n_aoa;
+	msmtinfo3->n_tdoa = msmtinfo1->n_tdoa;
 }
-
-void avg_cal(Mat* prtcls, Mat_S* X_avg, Mat_S* Pxx_)
+void store_data( fixed_type zDiff_local[NUM_PARTICLES*SN_NUM*2],
+					fixed_type pzx_local[NUM_PARTICLES*SN_NUM*2*SN_NUM*2],
+					fixed_type zDiff[NUM_PARTICLES*SN_NUM*2],
+					fixed_type pzx[NUM_PARTICLES*SN_NUM*2*SN_NUM*2])
 {
-	Mat_S temp_cal;
-	init_mat(&temp_cal,NUM_VAR,NUM_VAR);
+	size_t in_size1 = NUM_PARTICLES*N_MEAS*sizeof(fixed_type);
+	size_t in_size2 = NUM_PARTICLES*N_MEAS*N_MEAS*sizeof(fixed_type);
+//	memcpy(zDiff,zDiff_local,in_size1);
+//	memcpy(pzx,pzx_local,in_size2);
+	#pragma HLS PIPELINE off
 
-	Mat_S temp_X;
-	init_mat(&temp_X,NUM_VAR,1);
-
-	Mat_S temp_X2;
-	init_mat(&temp_X2,NUM_VAR,1);
-
-	fixed_type current_pxx[NUM_VAR*NUM_VAR];
-	fixed_type temp_pxx[NUM_VAR*NUM_VAR];
-	fixed_type temp_pxx2[NUM_VAR*NUM_VAR];
-
-//	for(int i =0; i < NUM_VAR*NUM_VAR;i++)
-//	{
-//		Pxx_->entries[i] = 0;
-//	}
-	size_t nvar_size = NUM_VAR*NUM_VAR*sizeof(fixed_type);
-
-	memset(Pxx_->entries, 0, nvar_size);
-	avg_cal:for(int i =0; i < NUM_PARTICLES;i++)
+	pzx_cp:for(int i=0; i < N_MEAS*N_MEAS*NUM_PARTICLES;i++)
 	{
-		// current_pxx = pxx_ => prepare for the accumulator
-		loadPxx(Pxx_->entries,current_pxx);
-//		showmat_S(Pxx_);
-		// temp_X2 = X_avg - X[i], where X[i] is the ith particle.
-		// temp_X2 = X_avg - prtcls[i].
-		// cout<< "X- X_avg:";
-		// showmat_S(&temp_X2);
-		selPrtcls(prtcls->entries,i,X_avg,&temp_X2);
-//		showmat_S(&temp_X2);
+#pragma HLS PIPELINE
+		pzx[i] =pzx_local[i];
+	}
 
-
-		// temp_cal = (X-X_avg)*(X - X_avg)' = tempX2*tempX2'
-		mulColRow(temp_X2.entries,temp_pxx);
-
-//		 cout<< "(X-X_avg)*(X - X_avg)':";
-//		 for(int i=0; i < NUM_VAR;i++)
-//		 {
-//			 for(int j=0; j < NUM_VAR;j++)
-//				 cout << temp_pxx[i*NUM_VAR+j] << "\t";
-//			 cout << "\n";
-//		 }
-//		 showmat_S(&temp_cal);
-		// temp_cal = temp_cal/Ns before joining the sum to solve the limitation breakpoint problems.
-		// Pxx_ = Pxx_ + ((X-X_)*(X-X_)')/Ns =  current_pxx + temp_pxx2/Ns
-		sumAcc(current_pxx,temp_pxx,Pxx_->entries);
+	zDiff_cp:for(int i=0; i < N_MEAS*NUM_PARTICLES;i++)
+	{
+#pragma HLS PIPELINE
+			zDiff[i] =zDiff_local[i];
 	}
 }
 
-void selPrtcls(fixed_type prtcls[], int col, Mat_S* X_avg, Mat_S* temp_X2)
-{
-//	cout << "sub\n";
-	for(int k=0; k < NUM_VAR;k++)
-	{
-
-		temp_X2->entries[k*NUM_VAR] = prtcls[k*NUM_PARTICLES+col] - X_avg->entries[k*NUM_VAR];
-//		cout << temp_X2->entries[k*NUM_VAR] << ", ";
-
-	}
-//	cout << "\n";
-	temp_X2->row= NUM_VAR;
-	temp_X2->col = 1;
-}
-// this is a simple matrix multiplication of A * A', where A is 13x1 matrix
-void mulColRow(fixed_type inMat[], fixed_type outMat[])
-{
-	int k =0;
-	// [13,1] x [1,13] = [13,13]
-	// where outMat[i,j] = A[i,1]*A[j,1];
-	matMul:for(int i =0; i < NUM_VAR;i++)
-	{
-
-		rowMul:for(int j =0; j < NUM_VAR;j++)
-		{
-#pragma HLS UNROLL
-			outMat[k] = inMat[i*NUM_VAR]*inMat[j*NUM_VAR];
-			k = k+1;
-		}
-	}
-}
-
-void loadPxx(fixed_type inMat[], fixed_type outMat[])
-{
-	loadPxx_label2:for(int i=0; i < NUM_VAR*NUM_VAR;i++)
-	{
-#pragma HLS UNROLL
-		outMat[i] = inMat[i];
-	}
-}
-
-// Accumulating the Pxx sum. inMat
-// Pxx_ = Pxx_ + ((X-X_)*(X-X_)')/Ns =  current_pxx + temp_pxx2/Ns
-// currPxx: Pxx_
-// newCov: (X-X_)*(X-X_)'
-void sumAcc(fixed_type currPxx[],fixed_type newCov[], fixed_type outMat[])
-{
-	fixed_type over_Ns  = 1.0/NUM_PARTICLES;
-	// Pxx_ = Pxx_ + (X-X_)*(X-X_)' = temp_pxx2 + current_pxx
-	sumAcc_label2:for(int i=0; i < NUM_VAR*NUM_VAR;i+=NUM_VAR)
-		{
-			sumAcc_label0:for(int i1=0; i1 < NUM_VAR;i1++)
-			{
-#pragma HLS UNROLL
-				fixed_type temp = newCov[i+i1]*over_Ns;
-				outMat[i+i1] = currPxx[i+i1] + temp;
-			}
-		}
-}

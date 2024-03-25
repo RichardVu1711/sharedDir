@@ -4,11 +4,12 @@
 
 #define SN_NUM 3
 typedef struct msmt{
-	Mat_S z;
+	fixed_type z[N_MEAS];
 	int n_aoa;
 	int n_tdoa;
-	int aoaIdx[3];
-	int tdoaIdx[3];
+	int aoaIdx[N_AOA];
+	int tdoaIdx[N_TDOA];
+	int validIdx[N_MEAS];
 } msmt;
 
 

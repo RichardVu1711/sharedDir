@@ -29,7 +29,7 @@ void showmat_S(Mat_S* A){
 
 void setRowMat_S(Mat_S* A, int rowIdx, fixed_type* insertedRow)
 {
-#pragma HLS INLINE
+
 	for(int i =0; i < A->col; i++)
 	{
 		A->entries[rowIdx*NUM_VAR +i] = insertedRow[i];
@@ -38,7 +38,7 @@ void setRowMat_S(Mat_S* A, int rowIdx, fixed_type* insertedRow)
 
 void init_mat(Mat_S* M, int row, int col)
 {
-#pragma HLS INLINE
+
 	// Matrix is initialized to 1023 values
 	// row and col is assigned to 1;
 	for(int i = row; i <NUM_VAR;i++)
@@ -54,7 +54,7 @@ void init_mat(Mat_S* M, int row, int col)
 
 
 fixed_type get_ele_S(Mat_S* M,int r,int c){
-#pragma HLS INLINE
+
     if(r >= M->row || c >= M->col)
 	{
     	return 1023;
@@ -66,7 +66,7 @@ fixed_type get_ele_S(Mat_S* M,int r,int c){
 // return 1 if go through.
 // otherwise return 1023;
 int set_ele_S(Mat_S* M,int r,int c,fixed_type d){
-#pragma HLS INLINE
+
 	if(r >= M->row || c >= M->col)
 	{
 		return 1023;
@@ -76,7 +76,7 @@ int set_ele_S(Mat_S* M,int r,int c,fixed_type d){
 }
 void copyvalue_S(Mat_S* A, Mat_S* B)
 {
-#pragma HLS INLINE
+
     int k=0;
 	for(int i=0;i<A->row;i++){
 		for(int j=0;j<A->col;j++)
@@ -87,7 +87,7 @@ void copyvalue_S(Mat_S* A, Mat_S* B)
 }
 void CTranspose_S(Mat_S* A, Mat_S* new_A)
 {
-#pragma HLS INLINE
+
 	int row =  A->row;
 	int col = A->col;
 	int i,j;
@@ -103,7 +103,7 @@ void CTranspose_S(Mat_S* A, Mat_S* new_A)
 
 void getColMat_S (Mat_S* A, int selected_col, Mat_S* SavedMat)
 {
-#pragma HLS INLINE
+
 	int  i;
 
 	for(i =0; i < A->row;i++)
@@ -114,7 +114,7 @@ void getColMat_S (Mat_S* A, int selected_col, Mat_S* SavedMat)
 }
 
 void multiply_S(Mat_S* A,Mat_S* B, Mat_S*C_Result){
-#pragma HLS INLINE
+
 	int r1=A->row;
 	int r2=B->row;
 	int c1=A->col;
@@ -139,7 +139,7 @@ void multiply_S(Mat_S* A,Mat_S* B, Mat_S*C_Result){
 }
 
 void scalermultiply_S(Mat_S* M,fixed_type c, Mat_S* B_Re){
-#pragma HLS INLINE
+
 	for(int i=0;i<M->row;i++){
 		for(int j=0;j<M->col;j++){
 			B_Re->entries[(i)*NUM_VAR+j]=M->entries[(i)*NUM_VAR+j]*c;
@@ -148,7 +148,7 @@ void scalermultiply_S(Mat_S* M,fixed_type c, Mat_S* B_Re){
 }
 
 void sum_S(Mat_S* A,Mat_S* B, Mat_S* C_Re){
-#pragma HLS INLINE
+
 	int r=A->row;
 	int c=A->col;
 	for(int i=0;i<r;i++){
@@ -164,7 +164,7 @@ void sum_S(Mat_S* A,Mat_S* B, Mat_S* C_Re){
 
 void minus_S(Mat_S* A,Mat_S* B, Mat_S* C_Re)
 {
-#pragma HLS INLINE
+
 	// C_re = A-B
 	int r=A->row;
 	int c=A->col;
@@ -178,7 +178,7 @@ void minus_S(Mat_S* A,Mat_S* B, Mat_S* C_Re)
 }
 void getRowMat_S (Mat_S* A, int selected_row, Mat_S* SavedMat)
 {
-#pragma HLS INLINE
+
 	int  i;
 	for(i =0; i < A->col;i++)
 	{
@@ -190,7 +190,7 @@ void getRowMat_S (Mat_S* A, int selected_row, Mat_S* SavedMat)
 // =========================== Bigger Matrix Type NUM_VAR x NUM_PARTICLES ====================================
 void setColMat_S2L (Mat* A, int selected_col, Mat_S* addedCol)
 {
-#pragma HLS INLINE
+
 	int  i;
 	for(i =0; i < A->row;i++)
 	{
@@ -201,7 +201,7 @@ void setColMat_S2L (Mat* A, int selected_col, Mat_S* addedCol)
 }
 
 void newmat(Mat* M, int r,int c){
-#pragma HLS INLINE
+
 	M->row = r;
     M->col = c;			
 	int i;
@@ -213,9 +213,8 @@ void newmat(Mat* M, int r,int c){
 
 void getColMat_L2S (Mat* A, int selected_col, Mat_S* SavedMat)
 {
-#pragma HLS INLINE
-	int  i;
-	for(i =0; i < A->row;i++)
+
+	for(int i =0; i < A->row;i++)
 	{
 		// Mat index: r*NUM_PARTICLES + c	NUM_VAR x NUM_PARTICLES
 		// Mat_S index: r*NUM_VAR + c		NUM_VAR x NUM_VAR
@@ -227,7 +226,7 @@ void getColMat_L2S (Mat* A, int selected_col, Mat_S* SavedMat)
 
 void set_ele(Mat* A, int row, int col, fixed_type in_val)
 {
-#pragma HLS INLINE
+
 	A->entries[row*NUM_PARTICLES + col] =in_val;
 }
 
@@ -249,4 +248,14 @@ void show_mat(Mat* X)
 	}
 	printf("End====\n");
 #endif
+}
+
+//hash-map handy function
+int hash_map(int row, int col, int type)
+{
+	// type = 1 => Mat_S
+	int result =0;
+	if(type ==1)
+		result = row*NUM_VAR+col;
+	return result;
 }

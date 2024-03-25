@@ -1,8 +1,8 @@
 #include "rk4.h"
-
 void rk4(Mat_S* R_input,Mat_S* X,fixed_type rnd_data[4*NUM_VAR])
 {
-
+	X->col = 1;
+	X->row = NUM_VAR;
     int i,j;
     fixed_type xh,h,h6,k_3 [NUM_VAR],k_2 [NUM_VAR],yt[NUM_VAR],yout[NUM_VAR],k_1[NUM_VAR],y[NUM_VAR];
 

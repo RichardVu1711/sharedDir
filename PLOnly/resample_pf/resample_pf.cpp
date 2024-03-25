@@ -1,8 +1,9 @@
 #include "resample_pf.h"
 
-void resamplePF_wrap(Mat* particles, fixed_type wt[NUM_PARTICLES], fixed_type r)
+void resamplePF_wrap(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
+					fixed_type wt[NUM_PARTICLES], fixed_type r)
 {
-	resample_pf(particles->entries,wt,NUM_PARTICLES,r,wt);
+	resample_pf(particle_in,wt,NUM_PARTICLES,r,wt);
 }
 
 int resample_pf(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
@@ -22,8 +23,6 @@ int resample_pf(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
     fixed_type bin_arr[NUM_PARTICLES];
     int bin_counts[NUM_PARTICLES];
     int i =0;
-    printf("\n");
-//    cout << step << "\n";
     bin_created(start,step,1.0,bin_arr);
     int j;
 
@@ -37,7 +36,6 @@ int resample_pf(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
         bin = Which_bin(bin_arr[i],edges, NUM_PARTICLES, start);
         bin_counts[i]=bin-1;
         if(bin_counts[i] < 0) bin_counts[i] = NUM_PARTICLES-1;
-//        printf("%d\t",bin_counts[i]);
     }
 
 
@@ -50,7 +48,6 @@ int resample_pf(fixed_type particle_in [NUM_VAR*NUM_PARTICLES],
             particle_out[i+j*NUM_PARTICLES] = particle_in[bin_counts[i]+NUM_PARTICLES*j];
 //            cout <<particle_out[i+j*NUM_PARTICLES]<<"\t";
         }
-//        printf("\n");
     }
 //    particle_in = particle_out;
     memcpy(&particle_in[0], &particle_out[0], (unsigned) NUM_PARTICLES*NUM_VAR * sizeof(fixed_type));
@@ -101,7 +98,6 @@ int bin_created(fixed_type start, fixed_type step, fixed_type end, fixed_type bo
         temp += step;
     }
     int size_bound = i;
-    printf("Step: %d\n",i);
     for(i; i >0 ;i--)
     {
         boundary[i-1] = instant[i-1];

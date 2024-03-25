@@ -509,7 +509,7 @@ static void mrdiv(double A_data[], int A_size[2], const double B_data[],
     m = A_size[1];
     if (0 <= m - 1) {
 //      std::copy(&A_data[0], &A_data[m], &b_B_data[0]);
-      for(int ii=0; i <m;ii++) b_B_data[ii] = A_data[ii];
+      for(int ii=0; ii <m;ii++) b_B_data[ii] = A_data[ii];
     }
     b_A_size[0] = B_size[1];
     b_A_size[1] = B_size[0];
