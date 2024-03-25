@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 //	}
 	for(int i_set =0; i_set < 1;i_set++){
 		for(int i =0; i < N_OBS-51;i++){
-			mvnpdf_tb(&imp,&srcx[0],i_set,i,impData);
+			mvnpdf_tb(&imp,&srcx[0],i_set,20,impData);
 		}
 	}
 

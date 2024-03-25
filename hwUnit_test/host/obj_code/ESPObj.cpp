@@ -475,8 +475,8 @@ int kernel_exec(
 		cl::Event* exec_events){
 	cl_int err;
 	cout << "Hello\n";
-//	OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects(memIn,0, NULL,data_events));
-	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel,nullptr,exec_events));
+	OCL_CHECK(err, err = imp->esp_control.q[qIdx].enqueueMigrateMemObjects(memIn,0, NULL,data_events));
+//	OCL_CHECK(err, err = imp->getQueue(qIdx).enqueueTask(kernel,nullptr,exec_events));
 
 	if(data_events!= nullptr) {
 		cout << "Hello";
